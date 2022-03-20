@@ -67,14 +67,14 @@ async function fetchFighters() {
           titleLosses: x.TitleLosses,
           titleDraws: x.TitleDraws,
           careerStats: {
-            sigStrikesLandedPerMinute: x.CareerStats.SigStrikesLandedPerMinute,
-            sigStrikeAccuracy: x.CareerStats.SigStrikeAccuracy,
-            takedownAverage: x.CareerStats.TakedownAverage,
-            submissionAverage: x.CareerStats.SubmissionAverage,
-            knockoutPercentage: x.CareerStats.KnockoutPercentage,
+            sigStrikesLandedPerMinute: x.CareerStats?.SigStrikesLandedPerMinute,
+            sigStrikeAccuracy: x.CareerStats?.SigStrikeAccuracy,
+            takedownAverage: x.CareerStats?.TakedownAverage,
+            submissionAverage: x.CareerStats?.SubmissionAverage,
+            knockoutPercentage: x.CareerStats?.KnockoutPercentage,
             technicalKnockoutPercentage:
-              x.CareerStats.TechnicalKnockoutPercentage,
-            decisionPercentage: x.CareerStats.DecisionPercentage,
+              x.CareerStats?.TechnicalKnockoutPercentage,
+            decisionPercentage: x.CareerStats?.DecisionPercentage,
           },
         },
         { upsert: true }
