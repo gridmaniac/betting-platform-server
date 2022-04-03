@@ -155,6 +155,8 @@ async function fetchSeason(league, season) {
   }
 }
 
-cron.schedule("0 * * * *", fetchLeagues);
-cron.schedule("0 * * * *", fetchFighters);
-cron.schedule("*/30 * * * *", fetchEvents);
+if (process.env.NO_CRON) {
+  cron.schedule("0 * * * *", fetchLeagues);
+  cron.schedule("0 * * * *", fetchFighters);
+  cron.schedule("*/30 * * * *", fetchEvents);
+}
