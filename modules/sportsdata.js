@@ -151,7 +151,7 @@ async function fetchSeason(league, season) {
       );
     }
 
-    await delay(5000);
+    await delay(1000);
   }
 }
 
