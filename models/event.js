@@ -2,13 +2,16 @@ const mongoose = require("mongoose");
 
 const schema = new mongoose.Schema({
   eventId: String,
-  leagueId: String,
   name: String,
-  shortName: String,
-  season: Number,
-  dateTime: Date,
+  startTime: Date,
+  startTimeConfirmed: Boolean,
+  sport: String,
+  category: String,
+  year: Number,
+  competitors: [mongoose.Schema.Types.Mixed],
   status: String,
+  winner: String,
 });
 
-schema.index({ season: 1 });
+schema.index({ sport: 1 });
 module.exports = mongoose.model("Event", schema);
