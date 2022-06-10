@@ -7,10 +7,11 @@ const schema = new mongoose.Schema({
   startTimeConfirmed: Boolean,
   sport: String,
   category: String,
-  year: Number,
   competitors: [mongoose.Schema.Types.Mixed],
   status: String,
-  winner: String,
+  winnerId: String,
+  homeScore: Number,
+  awayScore: Number,
 });
 
 schema.index({ sport: 1 });
