@@ -6,29 +6,29 @@ const jwt = require("jsonwebtoken");
 const passport = require("passport");
 
 const Event = require("../models/event");
-const Fight = require("../models/fight");
+const Season = require("../models/season");
 const User = require("../models/user");
 
-router.get("/events/:leagueId", async (req, res) => {
-  const { leagueId } = req.params;
-  const events = await Event.find({ leagueId }, null, {
+router.get("/seasons/:sport", async (req, res) => {
+  const { sport } = req.params;
+  const seasons = await Season.find({ sport }, null, {
     sort: {
-      dateTime: 1,
+      startDate: 1,
+    },
+  });
+
+  res.json(seasons);
+});
+
+router.get("/events/:seasonId", async (req, res) => {
+  const { seasonId } = req.params;
+  const events = await Event.find({ seasonId }, null, {
+    sort: {
+      startTime: 1,
     },
   });
 
   res.json(events);
-});
-
-router.get("/fights/:eventId", async (req, res) => {
-  const { eventId } = req.params;
-  const fights = await Fight.find({ eventId }, null, {
-    sort: {
-      order: 1,
-    },
-  });
-
-  res.json(fights);
 });
 
 router.post("/signup", async (req, res) => {
