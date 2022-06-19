@@ -1,4 +1,4 @@
-const SportRadar = require("../modules/SportRadar");
+const SportRadar = require("../modules/sportradar");
 const MMASeasonMapper = require("../mappers/MMASeasonMapper");
 const MMAEventMapper = require("../mappers/MMAEventMapper");
 const Event = require("../models/event");
@@ -38,6 +38,6 @@ module.exports.runJob = async function () {
       }
     }
   } catch (e) {
-    console.log("MMA", e.message);
+    console.error("MMA", e.message);
   }
 };

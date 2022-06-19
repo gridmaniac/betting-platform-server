@@ -8,6 +8,8 @@ const passport = require("passport");
 const Event = require("../models/event");
 const Season = require("../models/season");
 const User = require("../models/user");
+const Transaction = require("../models/transaction");
+const user = require("../models/user");
 
 router.get("/seasons/:sport", async (req, res) => {
   const { sport } = req.params;
@@ -96,6 +98,45 @@ router.get(
   passport.authenticate("jwt", { session: false }),
   async (req, res) => {
     return res.json({ secret: "hello" });
+  }
+);
+
+router.get(
+  "/wallet",
+  passport.authenticate("jwt", { session: false }),
+  async (req, res) => {
+    const { address, balance } = req.user;
+    const tranasctions = await Transaction.find({ userId: req.user.id }, null, {
+      sort: {
+        startDate: 1,
+      },
+    });
+
+    res.json({
+      address,
+      balance,
+      tranasctions: tranasctions.map((x) => ({
+        txHash: x.txHash,
+        amount: x.amount,
+        date: x.date,
+        type: x.type,
+      })),
+    });
+  }
+);
+
+router.patch(
+  "/wallet/address",
+  passport.authenticate("jwt", { session: false }),
+  async (req, res) => {
+    const { address } = req.body;
+    if (req.user.address === address) return res.json({ data: true });
+
+    const count = await User.count({ address });
+    if (count > 0) return res.json({ data: false });
+
+    await User.findByIdAndUpdate(req.user.id, { address });
+    res.json({ data: true });
   }
 );
 

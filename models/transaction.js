@@ -1,28 +1,28 @@
 const mongoose = require("mongoose");
+const moment = require("moment");
 
 const schema = new mongoose.Schema({
-  email: {
+  userId: {
+    type: String,
+    required: true,
+  },
+  txHash: {
     type: String,
     unique: true,
     required: true,
   },
-  hash: {
+  amount: {
     type: String,
     required: true,
   },
-  salt: {
+  type: {
     type: String,
     required: true,
   },
-  address: {
-    type: String,
-    unique: true,
-    default: "",
-  },
-  balance: {
-    type: Number,
-    default: 0,
+  date: {
+    type: Date,
+    default: moment.utc(),
   },
 });
 
-module.exports = mongoose.model("User", schema);
+module.exports = mongoose.model("Transaction", schema);

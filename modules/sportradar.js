@@ -7,10 +7,10 @@ async function delay(time) {
 }
 
 class SportRadar {
-  constructor(baseURL, api_key) {
+  constructor(baseURL, apiKey) {
     this.api = axios.create({
       baseURL,
-      params: { api_key },
+      params: { api_key: apiKey },
     });
   }
 

@@ -10,4 +10,4 @@ mongoose
     // the **path to** the CA file, **not** the contents of the CA file
     sslCA: `${__dirname}/ca-certificate.crt`,
   })
-  .catch((err) => console.log(err.reason));
+  .catch((err) => console.error(err.reason));
