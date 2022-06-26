@@ -47,7 +47,7 @@ async function processTransactions(transactions) {
 
     await session.commitTransaction();
   } catch (e) {
-    console.error(e.message);
+    console.error("Error while processing txs", e.message);
     await session.abortTransaction();
     throw new Error("TX processing failed");
   } finally {
@@ -91,7 +91,7 @@ module.exports.runDeposits = async function () {
 
       await delay(30000);
     } catch (e) {
-      console.error(e.message);
+      console.error("Error while processing block", e.message);
     }
   }
 };

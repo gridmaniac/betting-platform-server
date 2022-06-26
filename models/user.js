@@ -16,7 +16,6 @@ const schema = new mongoose.Schema({
   },
   address: {
     type: String,
-    unique: true,
     default: "",
   },
   balance: {
