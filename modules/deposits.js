@@ -73,8 +73,8 @@ module.exports.runDeposits = async function () {
 
       const blockNumber = await etherScan.getBlockNumber();
       const transactions = await etherScan.getTokenTransactionsByAddress(
-        "0x0101c8291008edd36b42160b6f606edf2a2a7e41",
-        "0xf6CDa9031f6aae3d4dc4310364699f06F51B989B",
+        process.env.CONTRACT_ADDRESS,
+        process.env.HOT_ADDRESS,
         lastBlockNumber,
         blockNumber
       );
