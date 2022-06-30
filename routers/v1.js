@@ -131,9 +131,10 @@ router.patch(
   async (req, res) => {
     const { address } = req.body;
     if (req.user.address === address) return res.json({ data: true });
-
-    const count = await User.count({ address });
-    if (count > 0) return res.json({ data: false });
+    if (address !== "") {
+      const count = await User.count({ address });
+      if (count > 0) return res.json({ data: false });
+    }
 
     await User.findByIdAndUpdate(req.user.id, { address });
     res.json({ data: true });
