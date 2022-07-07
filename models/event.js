@@ -5,6 +5,7 @@ const schema = new mongoose.Schema({
   seasonId: String,
   startTime: Date,
   startTimeConfirmed: Boolean,
+  closeTime: Date,
   competitors: [mongoose.Schema.Types.Mixed],
   status: String,
   winnerId: String,

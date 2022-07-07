@@ -20,7 +20,8 @@
     "node-cron": "^3.0.0",
     "passport": "^0.5.2",
     "passport-jwt": "^4.0.0",
-    "password-validator": "^5.2.1"
+    "password-validator": "^5.2.1",
+    "web3": "^1.7.4"
   },
   "devDependencies": {}
 }

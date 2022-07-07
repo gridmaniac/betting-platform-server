@@ -4,12 +4,15 @@ const { validateEmail, validatePassword } = require("../modules/validation");
 const { makePassword, verifyPassword } = require("../modules/password");
 const jwt = require("jsonwebtoken");
 const passport = require("passport");
+const mongoose = require("mongoose");
+const moment = require("moment");
+const { BigNumber } = require("ethers");
 
 const Event = require("../models/event");
 const Season = require("../models/season");
 const User = require("../models/user");
 const Transaction = require("../models/transaction");
-const user = require("../models/user");
+const Bet = require("../models/bet");
 
 router.get("/seasons/:sport", async (req, res) => {
   const { sport } = req.params;
@@ -105,8 +108,8 @@ router.get(
   "/wallet",
   passport.authenticate("jwt", { session: false }),
   async (req, res) => {
-    const { address, balance } = req.user;
-    const tranasctions = await Transaction.find({ userId: req.user.id }, null, {
+    const { id: userId, address, balance } = req.user;
+    const tranasctions = await Transaction.find({ userId }, null, {
       sort: {
         startDate: 1,
       },
@@ -115,6 +118,7 @@ router.get(
     res.json({
       address,
       balance,
+      decimals: process.env.DECIMALS,
       tranasctions: tranasctions.map((x) => ({
         txHash: x.txHash,
         amount: x.amount,
@@ -138,6 +142,125 @@ router.patch(
 
     await User.findByIdAndUpdate(req.user.id, { address });
     res.json({ data: true });
+  }
+);
+
+router.post(
+  "/wallet/withdraw",
+  passport.authenticate("jwt", { session: false }),
+  async (req, res) => {
+    const { amount } = req.body;
+    const { id: userId } = req.user;
+
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+      const bigAmount = BigNumber.from(amount);
+      if (bigAmount.lt(process.env.MIN_WITHDRAWAL))
+        throw new Error(
+          `Min. amount: ${process.env.MIN_WITHDRAWAL.slice(
+            0,
+            -process.env.DECIMALS
+          )}`
+        );
+
+      const user = await User.findById(userId).session(session);
+      if (!user.address) throw new Error("Wallet address was not specified.");
+
+      const bigBalance = BigNumber.from(user.balance);
+      if (bigAmount.gt(bigBalance)) throw new Error("Insufficient balance.");
+
+      user.balance = bigBalance.sub(bigAmount);
+      await user.save({ session });
+
+      const tx = new Transaction({
+        userId,
+        amount: bigAmount,
+        type: "withdrawal",
+        status: "pending",
+        address: user.address,
+      });
+
+      await tx.save({ session });
+      await session.commitTransaction();
+      res.json({ data: true });
+    } catch (e) {
+      await session.abortTransaction();
+      res.json({ data: false, err: e.message });
+    } finally {
+      session.endSession();
+    }
+  }
+);
+
+router.get(
+  "/bets",
+  passport.authenticate("jwt", { session: false }),
+  async (req, res) => {
+    const { id: userId } = req.user;
+    const bets = await Bet.find({ userId }, null, {
+      sort: {
+        startDate: 1,
+      },
+    });
+    res.json({ data: bets });
+  }
+);
+
+router.post(
+  "/bets",
+  passport.authenticate("jwt", { session: false }),
+  async (req, res) => {
+    const { id: userId } = req.user;
+    const { eventId, type, amount, winnerId } = req.body;
+
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+      const user = await User.findById(userId).session(session);
+      const bigAmount = BigNumber.from(amount);
+      const bigBalance = BigNumber.from(user.balance);
+      if (bigAmount.gt(bigBalance)) throw new Error("Insufficient balance.");
+
+      const event = await Event.findOne({ id: eventId }).session(session);
+      if (
+        event.status !== "not_started" ||
+        moment.utc().isAfter(event.closeTime)
+      )
+        throw new Error("Betting on this event is already closed.");
+
+      user.balance = bigBalance.sub(bigAmount);
+      await user.save({ session });
+
+      const season = await Season.findOne({ id: event.seasonId });
+      const bet = new Bet({
+        userId,
+        eventId,
+        type,
+        amount,
+        status: "open",
+        winnerId,
+        winner: event.competitors.find((x) => x.id === winnerId).name,
+        season: season.name,
+        startTime: event.startTime,
+      });
+
+      await bet.save({ session });
+      const tx = new Transaction({
+        userId,
+        amount: bigAmount,
+        type: "stake",
+      });
+
+      await tx.save({ session });
+      await session.commitTransaction();
+      res.json({ data: true });
+    } catch (e) {
+      await session.abortTransaction();
+      res.json({ data: false, err: e.message });
+    } finally {
+      session.endSession();
+    }
   }
 );
 

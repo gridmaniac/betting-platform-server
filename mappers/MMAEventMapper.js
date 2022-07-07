@@ -1,4 +1,5 @@
 const EventMapper = require("./EventMapper");
+const moment = require("moment");
 
 class MMAEventMapper extends EventMapper {
   constructor(event) {
@@ -8,6 +9,10 @@ class MMAEventMapper extends EventMapper {
       const names = x.name.split(", ");
       return { ...x, name: `${names[1]} ${names[0]}` };
     });
+
+    this.dto.closeTime = moment
+      .utc(this.event["start_time"])
+      .subtract(24, "hours");
   }
 }
 

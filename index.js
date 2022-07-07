@@ -15,3 +15,4 @@ if (process.env.SOCCER_CRON)
   cron.schedule(process.env.SOCCER_CRON, require("./jobs/soccer").runJob);
 
 require("./modules/deposits").runDeposits();
+require("./modules/withdrawals").runWithdrawals();

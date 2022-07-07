@@ -24,7 +24,7 @@ async function processTransactions(transactions) {
       });
 
       if (txCount === 0) {
-        const user = await User.findOne({ address: from });
+        const user = await User.findOne({ address: from }).session(session);
         if (user === null) continue;
 
         await Transaction.findOneAndUpdate(
@@ -57,6 +57,7 @@ async function processTransactions(transactions) {
 
 module.exports.runDeposits = async function () {
   while (true) {
+    await delay(30000);
     try {
       const etherScan = new EtherScan(
         process.env.ETHERSCAN_API_URL,
@@ -88,8 +89,6 @@ module.exports.runDeposits = async function () {
         },
         { upsert: true }
       );
-
-      await delay(30000);
     } catch (e) {
       console.error("Error while processing block", e.message);
     }

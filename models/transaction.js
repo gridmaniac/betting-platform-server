@@ -6,11 +6,7 @@ const schema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  txHash: {
-    type: String,
-    unique: true,
-    required: true,
-  },
+  txHash: String,
   amount: {
     type: String,
     required: true,
@@ -19,6 +15,8 @@ const schema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  status: String,
+  address: String,
   date: {
     type: Date,
     default: moment.utc(),

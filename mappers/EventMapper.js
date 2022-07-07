@@ -11,6 +11,7 @@ class EventMapper {
       seasonId: this.context["season"].id,
       startTime: moment.utc(this.event["start_time"]),
       startTimeConfirmed: this.event["start_time_confirmed"],
+      closeTime: moment.utc(this.event["start_time"]),
       competitors: this.event["competitors"],
       status: this.status["status"],
       winnerId: this.status["winner_id"],
