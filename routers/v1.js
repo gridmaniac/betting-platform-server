@@ -119,6 +119,7 @@ router.get(
       address,
       balance,
       decimals: process.env.DECIMALS,
+      hotAddress: process.env.HOT_ADDRESS,
       tranasctions: tranasctions.map((x) => ({
         txHash: x.txHash,
         amount: x.amount,
