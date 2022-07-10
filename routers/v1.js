@@ -215,14 +215,26 @@ router.post(
   async (req, res) => {
     const { id: userId } = req.user;
     const { eventId, type, amount, winnerId } = req.body;
+    const modelErrors = {};
 
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
-      const user = await User.findById(userId).session(session);
       const bigAmount = BigNumber.from(amount);
+      if (bigAmount.lt(process.env.MIN_STAKE)) {
+        modelErrors.amount = `Min. stake: ${process.env.MIN_STAKE.slice(
+          0,
+          -process.env.DECIMALS
+        )}`;
+        throw new Error();
+      }
+
+      const user = await User.findById(userId).session(session);
       const bigBalance = BigNumber.from(user.balance);
-      if (bigAmount.gt(bigBalance)) throw new Error("Insufficient balance.");
+      if (bigAmount.gt(bigBalance)) {
+        modelErrors.amount = "Insufficient balance.";
+        throw new Error();
+      }
 
       const event = await Event.findOne({ id: eventId }).session(session);
       if (
@@ -259,7 +271,7 @@ router.post(
       res.json({ data: true });
     } catch (e) {
       await session.abortTransaction();
-      res.json({ data: false, err: e.message });
+      res.json({ data: false, err: e.message, modelErrors });
     } finally {
       session.endSession();
     }
