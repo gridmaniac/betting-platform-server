@@ -159,7 +159,7 @@ router.get(
   passport.authenticate("jwt", { session: false }),
   async (req, res) => {
     const { id: userId, address, balance } = req.user;
-    const tranasctions = await Transaction.find({ userId }, null, {
+    const transactions = await Transaction.find({ userId }, null, {
       sort: {
         startDate: 1,
       },
@@ -178,7 +178,7 @@ router.get(
       decimals: process.env.DECIMALS,
       hotAddress: process.env.HOT_ADDRESS,
       contractAddress: process.env.CONTRACT_ADDRESS,
-      tranasctions: tranasctions.map((x) => ({
+      transactions: transactions.map((x) => ({
         txHash: x.txHash,
         amount: x.amount,
         date: x.date,
