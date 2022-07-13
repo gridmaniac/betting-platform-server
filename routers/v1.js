@@ -7,6 +7,8 @@ const passport = require("passport");
 const mongoose = require("mongoose");
 const moment = require("moment");
 const { BigNumber } = require("ethers");
+const { sendEmailConfirmation, sendResetPassword } = require("../modules/mail");
+const generator = require("generate-password");
 
 const Event = require("../models/event");
 const Season = require("../models/season");
@@ -65,6 +67,18 @@ router.post("/signup", async (req, res) => {
   const user = new User({ email, hash, salt });
   await user.save();
 
+  sendEmailConfirmation(email, user._id);
+  return res.json({ data: true });
+});
+
+router.put("/activate", async (req, res) => {
+  const { confirmationCode } = req.body;
+
+  const user = await User.findById(confirmationCode);
+  if (!user) return res.json({ data: false });
+
+  user.isActive = true;
+  await user.save();
   return res.json({ data: true });
 });
 
@@ -78,7 +92,7 @@ router.post("/login", async (req, res) => {
   }
 
   const user = await User.findOne({ email });
-  if (!user)
+  if (!user || !user.isActive)
     modelErrors["password"] =
       "Incorrect email address or password, please try again.";
   else {
@@ -96,13 +110,49 @@ router.post("/login", async (req, res) => {
   return res.json({ data: token });
 });
 
-router.get(
-  "/profile",
+router.put(
+  "/password",
   passport.authenticate("jwt", { session: false }),
   async (req, res) => {
-    return res.json({ secret: "hello" });
+    const { id: userId } = req.user;
+    const { password } = req.body;
+    const modelErrors = {};
+
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      modelErrors["password"] = passwordError;
+      return res.json({ modelErrors, data: false });
+    }
+
+    if (Object.keys(modelErrors).length > 0)
+      return res.json({ modelErrors, data: false });
+
+    const { hash, salt } = await makePassword(password);
+    const user = await User.findById(userId);
+    user.hash = hash;
+    user.salt = salt;
+    await user.save();
+    return res.json({ data: true });
   }
 );
+
+router.post("/password/reset", async (req, res) => {
+  const { email } = req.body;
+  const password = generator.generate({
+    length: 16,
+    numbers: true,
+  });
+
+  const user = await User.findOne({ email });
+  if (!user) return res.json({ data: true });
+
+  const { hash, salt } = await makePassword(password);
+  user.hash = hash;
+  user.salt = salt;
+  await user.save();
+  await sendResetPassword(user.email, password);
+  return res.json({ data: true });
+});
 
 router.get(
   "/wallet",
@@ -115,9 +165,16 @@ router.get(
       },
     });
 
+    const bets = await Bet.find({ userId });
+    const inBets = bets.reduce(
+      (a, b) => a.add(BigNumber.from(b.amount)),
+      BigNumber.from(0)
+    );
+
     res.json({
       address,
       balance,
+      inBets: inBets.toString(),
       decimals: process.env.DECIMALS,
       hotAddress: process.env.HOT_ADDRESS,
       contractAddress: process.env.CONTRACT_ADDRESS,

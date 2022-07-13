@@ -22,6 +22,10 @@ const schema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
+  isActive: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 module.exports = mongoose.model("User", schema);

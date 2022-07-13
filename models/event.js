@@ -8,6 +8,10 @@ const schema = new mongoose.Schema({
   closeTime: Date,
   competitors: [mongoose.Schema.Types.Mixed],
   status: String,
+  processed: {
+    type: Boolean,
+    default: false,
+  },
   winnerId: String,
   homeScore: Number,
   awayScore: Number,
