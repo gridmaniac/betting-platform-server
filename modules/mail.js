@@ -8,7 +8,7 @@ async function sendMail(to, subject, html) {
   try {
     const msg = {
       to,
-      from: "KOA Combat LLC",
+      from: "anton@koacombat.com",
       subject,
       html,
     };
