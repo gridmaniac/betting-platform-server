@@ -166,7 +166,7 @@ router.get(
       },
     });
 
-    const bets = await Bet.find({ userId });
+    const bets = await Bet.find({ userId, status: "open" });
     const inBets = bets.reduce(
       (a, b) => a.add(BigNumber.from(b.amount)),
       BigNumber.from(0)
@@ -259,7 +259,7 @@ router.get(
   passport.authenticate("jwt", { session: false }),
   async (req, res) => {
     const { id: userId } = req.user;
-    const bets = await Bet.find({ userId, status: "open" }, null, {
+    const bets = await Bet.find({ userId }, null, {
       sort: {
         date: -1,
       },
