@@ -4,6 +4,7 @@ const Transaction = require("../models/transaction");
 const User = require("../models/user");
 const Event = require("../models/event");
 const Bet = require("../models/bet");
+const moment = require("moment");
 
 async function delay(time) {
   return new Promise((resolve) => {
@@ -61,6 +62,7 @@ async function processNextClosedEvent() {
             userId,
             amount: profit,
             type: "payoff",
+            date: moment.utc(),
           });
 
           await tx.save({ session });
@@ -108,6 +110,7 @@ async function processNextCancelledEvent() {
         userId,
         amount: bet.amount,
         type: "refund",
+        date: moment.utc(),
       });
 
       await tx.save({ session });

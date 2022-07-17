@@ -324,6 +324,7 @@ router.post(
         userId,
         amount: bigAmount,
         type: "stake",
+        date: moment.utc(),
       });
 
       await tx.save({ session });
@@ -338,7 +339,7 @@ router.post(
   }
 );
 
-router.post("/deposts", async (req, res) => {
+router.post("/deposits", async (req, res) => {
   const { lastBlockNumber, blockNumber } = req.body;
   try {
     await processTransactions(lastBlockNumber, blockNumber);

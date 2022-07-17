@@ -1,5 +1,6 @@
 const EtherScan = require("./etherscan");
 const mongoose = require("mongoose");
+const moment = require("moment");
 const { BigNumber } = require("ethers");
 const Setting = require("../models/setting");
 const Transaction = require("../models/transaction");
@@ -46,6 +47,7 @@ async function processTransactions(lastBlockNumber, blockNumber) {
             txHash: hash,
             amount: value,
             type: "deposit",
+            date: moment.utc(),
           },
           { upsert: true, session }
         );
