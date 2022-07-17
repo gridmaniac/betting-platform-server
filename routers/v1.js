@@ -161,7 +161,7 @@ router.get(
     const { id: userId, address, balance } = req.user;
     const transactions = await Transaction.find({ userId }, null, {
       sort: {
-        startDate: 1,
+        date: -1,
       },
     });
 
@@ -259,7 +259,7 @@ router.get(
     const { id: userId } = req.user;
     const bets = await Bet.find({ userId }, null, {
       sort: {
-        startDate: 1,
+        date: -1,
       },
     });
     res.json({ data: bets });
