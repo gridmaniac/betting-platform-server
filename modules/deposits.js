@@ -16,11 +16,10 @@ const etherScan = new EtherScan(
   process.env.ETHERSCAN_API_KEY
 );
 
-module.exports.processTransactions = async (lastBlockNumber) => {
+module.exports.processTransactions = async (lastBlockNumber, blockNumber) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
-    const blockNumber = await etherScan.getBlockNumber();
     const transactions = await etherScan.getTokenTransactionsByAddress(
       process.env.CONTRACT_ADDRESS,
       process.env.HOT_ADDRESS,
@@ -59,7 +58,6 @@ module.exports.processTransactions = async (lastBlockNumber) => {
     }
 
     await session.commitTransaction();
-    return blockNumber;
   } catch (e) {
     console.error("Error while processing txs", e.message);
     await session.abortTransaction();
@@ -73,15 +71,16 @@ module.exports.runDeposits = async function () {
   while (true) {
     await delay(30000);
     try {
+      const blockNumber = await etherScan.getBlockNumber();
       const blockNumberSetting = await Setting.findOne({
         name: "blockNumber",
       });
 
       const lastBlockNumber = blockNumberSetting
         ? blockNumberSetting.value
-        : await etherScan.getBlockNumber();
+        : blockNumber;
 
-      const blockNumber = await processTransactions(lastBlockNumber);
+      await processTransactions(lastBlockNumber, blockNumber);
       await Setting.findOneAndUpdate(
         { name: "blockNumber" },
         {

@@ -339,9 +339,9 @@ router.post(
 );
 
 router.post("/deposts", async (req, res) => {
-  const { lastBlockNumber } = req.body;
+  const { lastBlockNumber, blockNumber } = req.body;
   try {
-    await processTransactions(lastBlockNumber);
+    await processTransactions(lastBlockNumber, blockNumber);
   } catch (e) {
     return res.json({ data: false });
   }
