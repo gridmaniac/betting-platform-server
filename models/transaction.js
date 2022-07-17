@@ -17,10 +17,7 @@ const schema = new mongoose.Schema({
   },
   status: String,
   address: String,
-  date: {
-    type: Date,
-    default: moment.utc,
-  },
+  date: Date,
 });
 
 module.exports = mongoose.model("Transaction", schema);

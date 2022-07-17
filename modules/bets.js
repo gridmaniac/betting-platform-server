@@ -127,10 +127,10 @@ async function processNextCancelledEvent() {
 
 module.exports.runBets = async function () {
   while (true) {
-    await delay(10000);
+    await delay(1000);
     try {
       processNextClosedEvent();
-      await delay(10000);
+      await delay(1000);
       processNextCancelledEvent();
     } catch (e) {
       console.error("Error while processing bets", e.message);

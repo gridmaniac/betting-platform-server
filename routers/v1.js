@@ -238,6 +238,7 @@ router.post(
         type: "withdrawal",
         status: "pending",
         address: user.address,
+        date: moment.utc(),
       });
 
       await tx.save({ session });
@@ -314,6 +315,7 @@ router.post(
         winner: event.competitors.find((x) => x.id === winnerId).name,
         season: season.name,
         startTime: event.startTime,
+        date: moment.utc(),
       });
 
       await bet.save({ session });
