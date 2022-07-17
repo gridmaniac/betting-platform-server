@@ -26,6 +26,7 @@ async function processNextClosedEvent() {
     await event.save({ session });
 
     const bets = await Bet.find({
+      status: "open",
       eventId: event.id,
     }).session(session);
 
@@ -34,23 +35,23 @@ async function processNextClosedEvent() {
         case "winner":
           const { winnerId } = event;
           if (bet.winnerId !== winnerId) break;
-          const pool = bets.filter((x = x.type === bet.type));
+          const pool = bets.filter((x) => x.type === bet.type);
           const positiveHouse = pool
-            .filter(x.winnerId === bet.winnerId)
+            .filter((x) => x.winnerId === bet.winnerId)
             .reduce(
               (a, b) => a.add(BigNumber.from(b.amount)),
               BigNumber.from(0)
             );
 
           const negativeHouse = pool
-            .filter(x.winnerId !== bet.winnerId)
+            .filter((x) => x.winnerId !== bet.winnerId)
             .reduce(
               (a, b) => a.add(BigNumber.from(b.amount)),
               BigNumber.from(0)
             );
 
           const ratio = BigNumber.from(bet.amount).div(positiveHouse);
-          const profit = ratio.mul(negativeHouse);
+          const profit = ratio.mul(negativeHouse).add(bet.amount);
 
           const user = await User.findById(bet.userId).session(session);
           const bigBalance = BigNumber.from(user.balance);
@@ -59,7 +60,7 @@ async function processNextClosedEvent() {
           await user.save({ session });
 
           const tx = new Transaction({
-            userId,
+            userId: user.id,
             amount: profit,
             type: "payoff",
             date: moment.utc(),
@@ -96,6 +97,7 @@ async function processNextCancelledEvent() {
     await event.save({ session });
 
     const bets = await Bet.find({
+      status: "open",
       eventId: event.id,
     }).session(session);
 
@@ -107,7 +109,7 @@ async function processNextCancelledEvent() {
       await user.save({ session });
 
       const tx = new Transaction({
-        userId,
+        userId: user.id,
         amount: bet.amount,
         type: "refund",
         date: moment.utc(),
@@ -132,9 +134,9 @@ module.exports.runBets = async function () {
   while (true) {
     await delay(1000);
     try {
-      processNextClosedEvent();
+      await processNextClosedEvent();
       await delay(1000);
-      processNextCancelledEvent();
+      await processNextCancelledEvent();
     } catch (e) {
       console.error("Error while processing bets", e.message);
     }

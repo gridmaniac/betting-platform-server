@@ -259,7 +259,7 @@ router.get(
   passport.authenticate("jwt", { session: false }),
   async (req, res) => {
     const { id: userId } = req.user;
-    const bets = await Bet.find({ userId }, null, {
+    const bets = await Bet.find({ userId, status: "open" }, null, {
       sort: {
         date: -1,
       },

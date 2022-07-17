@@ -16,4 +16,4 @@ if (process.env.SOCCER_CRON)
 
 require("./modules/deposits").runDeposits();
 require("./modules/withdrawals").runWithdrawals();
-// require("./modules/bets").runBets();
+require("./modules/bets").runBets();
