@@ -16,7 +16,7 @@ const etherScan = new EtherScan(
   process.env.ETHERSCAN_API_KEY
 );
 
-module.exports.processTransactions = async (lastBlockNumber, blockNumber) => {
+async function processTransactions(lastBlockNumber, blockNumber) {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
@@ -65,7 +65,7 @@ module.exports.processTransactions = async (lastBlockNumber, blockNumber) => {
   } finally {
     session.endSession();
   }
-};
+}
 
 module.exports.runDeposits = async function () {
   while (true) {
@@ -94,3 +94,5 @@ module.exports.runDeposits = async function () {
     }
   }
 };
+
+module.exports.processTransactions = processTransactions;
