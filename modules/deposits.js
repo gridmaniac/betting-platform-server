@@ -11,10 +11,23 @@ async function delay(time) {
   });
 }
 
-async function processTransactions(transactions) {
+const etherScan = new EtherScan(
+  process.env.ETHERSCAN_API_URL,
+  process.env.ETHERSCAN_API_KEY
+);
+
+module.exports.processTransactions = async (lastBlockNumber) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
+    const blockNumber = await etherScan.getBlockNumber();
+    const transactions = await etherScan.getTokenTransactionsByAddress(
+      process.env.CONTRACT_ADDRESS,
+      process.env.HOT_ADDRESS,
+      lastBlockNumber,
+      blockNumber
+    );
+
     for (const tx of transactions) {
       const { hash, value, from } = tx;
 
@@ -46,6 +59,7 @@ async function processTransactions(transactions) {
     }
 
     await session.commitTransaction();
+    return blockNumber;
   } catch (e) {
     console.error("Error while processing txs", e.message);
     await session.abortTransaction();
@@ -53,17 +67,12 @@ async function processTransactions(transactions) {
   } finally {
     session.endSession();
   }
-}
+};
 
 module.exports.runDeposits = async function () {
   while (true) {
     await delay(30000);
     try {
-      const etherScan = new EtherScan(
-        process.env.ETHERSCAN_API_URL,
-        process.env.ETHERSCAN_API_KEY
-      );
-
       const blockNumberSetting = await Setting.findOne({
         name: "blockNumber",
       });
@@ -72,15 +81,7 @@ module.exports.runDeposits = async function () {
         ? blockNumberSetting.value
         : await etherScan.getBlockNumber();
 
-      const blockNumber = await etherScan.getBlockNumber();
-      const transactions = await etherScan.getTokenTransactionsByAddress(
-        process.env.CONTRACT_ADDRESS,
-        process.env.HOT_ADDRESS,
-        lastBlockNumber,
-        blockNumber
-      );
-
-      await processTransactions(transactions);
+      const blockNumber = await processTransactions(lastBlockNumber);
       await Setting.findOneAndUpdate(
         { name: "blockNumber" },
         {

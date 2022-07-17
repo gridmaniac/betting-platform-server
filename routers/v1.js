@@ -9,6 +9,7 @@ const moment = require("moment");
 const { BigNumber } = require("ethers");
 const { sendEmailConfirmation, sendResetPassword } = require("../modules/mail");
 const generator = require("generate-password");
+const { processTransactions } = require("../modules/deposits");
 
 const Event = require("../models/event");
 const Season = require("../models/season");
@@ -336,5 +337,16 @@ router.post(
     }
   }
 );
+
+router.post("/deposts", async (req, res) => {
+  const { lastBlockNumber } = req.body;
+  try {
+    await processTransactions(lastBlockNumber);
+  } catch (e) {
+    return res.json({ data: false });
+  }
+
+  res.json({ data: true });
+});
 
 module.exports = router;
