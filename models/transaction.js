@@ -19,7 +19,7 @@ const schema = new mongoose.Schema({
   address: String,
   date: {
     type: Date,
-    default: moment.utc(),
+    default: moment.utc,
   },
 });
 

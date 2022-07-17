@@ -6,7 +6,7 @@ const schema = new mongoose.Schema({
   eventId: String,
   date: {
     type: Date,
-    default: moment.utc(),
+    default: moment.utc,
   },
   type: String,
   amount: Number,
