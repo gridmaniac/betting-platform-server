@@ -144,7 +144,7 @@ router.post("/password/reset", async (req, res) => {
   });
 
   const user = await User.findOne({ email });
-  if (!user) return res.json({ data: true });
+  if (!user || !user.isActive) return res.json({ data: true });
 
   const { hash, salt } = await makePassword(password);
   user.hash = hash;
