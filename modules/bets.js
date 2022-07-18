@@ -59,25 +59,25 @@ async function processNextClosedEvent() {
           break;
       }
 
-      for (const userId in profits) {
-        const user = await User.findById(userId).session(session);
-        const bigBalance = BigNumber.from(user.balance);
-
-        user.balance = bigBalance.add(profits[userId]);
-        await user.save({ session });
-
-        const tx = new Transaction({
-          userId: userId,
-          amount: profits[userId],
-          type: "payoff",
-          date: moment.utc(),
-        });
-
-        await tx.save({ session });
-      }
-
       bet.status = "settled";
       await bet.save({ session });
+    }
+
+    for (const userId in profits) {
+      const user = await User.findById(userId).session(session);
+      const bigBalance = BigNumber.from(user.balance);
+
+      user.balance = bigBalance.add(profits[userId]);
+      await user.save({ session });
+
+      const tx = new Transaction({
+        userId: userId,
+        amount: profits[userId],
+        type: "payoff",
+        date: moment.utc(),
+      });
+
+      await tx.save({ session });
     }
 
     await session.commitTransaction();
@@ -111,6 +111,9 @@ async function processNextCancelledEvent() {
     for (const bet of bets) {
       if (bet.userId in refunds) refunds[bet.userId].add(bet.amount);
       else refunds[bet.userId] = BigNumber.from(bet.amount);
+
+      bet.status = "cancelled";
+      await bet.save({ session });
     }
 
     for (const userId in refunds) {
@@ -128,9 +131,6 @@ async function processNextCancelledEvent() {
       });
 
       await tx.save({ session });
-
-      bet.status = "cancelled";
-      await bet.save({ session });
     }
 
     await session.commitTransaction();
