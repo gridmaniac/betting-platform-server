@@ -17,11 +17,11 @@ const etherScan = new EtherScan(
   process.env.ETHERSCAN_API_KEY
 );
 
-async function processTransaction(tx) {
+async function processTransaction(transaction) {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
-    const { hash, value, from } = tx;
+    const { hash, value, from } = transaction;
     const txCount = await Transaction.count({ txHash: hash }).session(session);
     if (txCount !== 0) throw new Error(`Tx ${hash} has been already processed`);
 
@@ -32,14 +32,14 @@ async function processTransaction(tx) {
     user.balance = amount.add(value);
     await user.save({ session });
 
-    const transaction = new Transaction({
+    const tx = new Transaction({
       userId: user.id,
       txHash: hash,
       amount: value,
       type: "deposit",
       date: moment.utc(),
     });
-    transaction.save({ session });
+    await tx.save({ session });
 
     await session.commitTransaction();
   } catch (e) {
