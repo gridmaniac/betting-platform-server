@@ -14,6 +14,10 @@ if (process.env.MMA_CRON)
 if (process.env.SOCCER_CRON)
   cron.schedule(process.env.SOCCER_CRON, require("./jobs/soccer").runJob);
 
-require("./modules/deposits").runDeposits();
-require("./modules/withdrawals").runWithdrawals();
-require("./modules/bets").runBets();
+if (!process.env.DISABLE_DEPOSITS_MODULE)
+  require("./modules/deposits").runDeposits();
+
+if (!process.env.DISABLE_WITHDRAWALS_MODULE)
+  require("./modules/withdrawals").runWithdrawals();
+
+if (!process.env.DISABLE_BETS_MODULE) require("./modules/bets").runBets();
