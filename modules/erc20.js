@@ -7,14 +7,14 @@ class ERC20 {
     this.tokenAddress = tokenAddress;
   }
 
-  async transfer(from, privateKey, to, amount) {
+  async transfer(from, privateKey, to, amount, gasLimit) {
     const gasPrice = await this.web3.eth.getGasPrice();
     const data = this.contract.methods
       .transfer(to, this.web3.utils.toHex(amount))
       .encodeABI();
 
     const txObj = {
-      gas: this.web3.utils.toHex(100000),
+      gas: this.web3.utils.toHex(gasLimit),
       gasPrice,
       to: this.tokenAddress,
       value: "0x0",
