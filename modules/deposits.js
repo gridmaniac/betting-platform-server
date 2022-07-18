@@ -17,56 +17,48 @@ const etherScan = new EtherScan(
   process.env.ETHERSCAN_API_KEY
 );
 
-async function processTransactions(lastBlockNumber, blockNumber) {
+async function processTransaction(tx) {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
-    const transactions = await etherScan.getTokenTransactionsByAddress(
-      process.env.CONTRACT_ADDRESS,
-      process.env.HOT_ADDRESS,
-      lastBlockNumber,
-      blockNumber
-    );
+    const { hash, value, from } = tx;
+    const txCount = await Transaction.count({ txHash: hash }).session(session);
+    if (txCount !== 0) throw new Error(`Tx ${hash} has been already processed`);
 
-    for (const tx of transactions) {
-      const { hash, value, from } = tx;
+    const user = await User.findOne({ address: from }).session(session);
+    if (user === null) throw new Error(`Address ${from} not found`);
 
-      const txCount = await Transaction.count({
-        txHash: hash,
-        type: "deposit",
-      });
+    const amount = BigNumber.from(user.balance);
+    user.balance = amount.add(value);
+    await user.save({ session });
 
-      if (txCount === 0) {
-        const user = await User.findOne({ address: from }).session(session);
-        if (user === null) continue;
-
-        await Transaction.findOneAndUpdate(
-          { txHash: hash },
-          {
-            userId: user.id,
-            txHash: hash,
-            amount: value,
-            type: "deposit",
-            date: moment.utc(),
-          },
-          { upsert: true, session }
-        );
-
-        const amount = BigNumber.from(user.balance);
-        user.balance = amount.add(value);
-
-        await user.save({ session });
-      }
-    }
+    const transaction = new Transaction({
+      userId: user.id,
+      txHash: hash,
+      amount: value,
+      type: "deposit",
+      date: moment.utc(),
+    });
+    transaction.save({ session });
 
     await session.commitTransaction();
   } catch (e) {
-    console.error("Error while processing txs", e.message);
     await session.abortTransaction();
-    throw new Error("TX processing failed");
+    console.error("Error while processing tx", e.message);
   } finally {
     session.endSession();
   }
+}
+
+async function processTransactions(lastBlockNumber, blockNumber) {
+  const transactions = await etherScan.getTokenTransactionsByAddress(
+    process.env.CONTRACT_ADDRESS,
+    process.env.HOT_ADDRESS,
+    lastBlockNumber,
+    blockNumber
+  );
+
+  for (const tx of transactions) await processTransaction(tx);
 }
 
 module.exports.runDeposits = async function () {
@@ -92,7 +84,7 @@ module.exports.runDeposits = async function () {
         { upsert: true }
       );
     } catch (e) {
-      console.error("Error while processing block", e.message);
+      console.error("Error while processing blocks", e.message);
     }
   }
 };

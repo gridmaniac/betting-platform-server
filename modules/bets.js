@@ -30,6 +30,7 @@ async function processNextClosedEvent() {
       eventId: event.id,
     }).session(session);
 
+    const profits = {};
     for (const bet of bets) {
       switch (bet.type) {
         case "winner":
@@ -53,21 +54,26 @@ async function processNextClosedEvent() {
           const ratio = BigNumber.from(bet.amount).div(positiveHouse);
           const profit = ratio.mul(negativeHouse).add(bet.amount);
 
-          const user = await User.findById(bet.userId).session(session);
-          const bigBalance = BigNumber.from(user.balance);
-
-          user.balance = bigBalance.add(profit);
-          await user.save({ session });
-
-          const tx = new Transaction({
-            userId: user.id,
-            amount: profit,
-            type: "payoff",
-            date: moment.utc(),
-          });
-
-          await tx.save({ session });
+          if (bet.userId in profits) profits[bet.userId].add(profit);
+          else profits[bet.userId] = profit;
           break;
+      }
+
+      for (const userId in profits) {
+        const user = await User.findById(userId).session(session);
+        const bigBalance = BigNumber.from(user.balance);
+
+        user.balance = bigBalance.add(profits[userId]);
+        await user.save({ session });
+
+        const tx = new Transaction({
+          userId: userId,
+          amount: profits[userId],
+          type: "payoff",
+          date: moment.utc(),
+        });
+
+        await tx.save({ session });
       }
 
       bet.status = "settled";
@@ -101,16 +107,22 @@ async function processNextCancelledEvent() {
       eventId: event.id,
     }).session(session);
 
+    const refunds = {};
     for (const bet of bets) {
-      const user = await User.findById(bet.userId).session(session);
+      if (bet.userId in refunds) refunds[bet.userId].add(bet.amount);
+      else refunds[bet.userId] = BigNumber.from(bet.amount);
+    }
+
+    for (const userId in refunds) {
+      const user = await User.findById(userId).session(session);
       const bigBalance = BigNumber.from(user.balance);
 
-      user.balance = bigBalance.add(bet.amount);
+      user.balance = bigBalance.add(refunds[userId]);
       await user.save({ session });
 
       const tx = new Transaction({
-        userId: user.id,
-        amount: bet.amount,
+        userId: userId,
+        amount: refunds[userId],
         type: "refund",
         date: moment.utc(),
       });
@@ -123,7 +135,7 @@ async function processNextCancelledEvent() {
 
     await session.commitTransaction();
   } catch (e) {
-    console.error("Error while processing closed event", e.message);
+    console.error("Error while processing cancelled event", e.message);
     await session.abortTransaction();
   } finally {
     session.endSession();
