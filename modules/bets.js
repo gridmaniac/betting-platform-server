@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const { BigNumber } = require("ethers");
+const BN = require("bignumber.js");
 const Transaction = require("../models/transaction");
 const User = require("../models/user");
 const Event = require("../models/event");
@@ -51,10 +52,13 @@ async function processNextClosedEvent() {
               BigNumber.from(0)
             );
 
-          const ratio = BigNumber.from(bet.amount).div(positiveHouse);
-          const profit = ratio.mul(negativeHouse).add(bet.amount);
+          const ratio = BN(bet.amount).div(positiveHouse.toString());
+          const profit = BigNumber.from(
+            ratio.times(negativeHouse.toString()).toFixed(0)
+          ).add(bet.amount);
 
-          if (bet.userId in profits) profits[bet.userId].add(profit);
+          if (bet.userId in profits)
+            profits[bet.userId] = profits[bet.userId].add(profit);
           else profits[bet.userId] = profit;
           break;
       }
@@ -109,7 +113,8 @@ async function processNextCancelledEvent() {
 
     const refunds = {};
     for (const bet of bets) {
-      if (bet.userId in refunds) refunds[bet.userId].add(bet.amount);
+      if (bet.userId in refunds)
+        refunds[bet.userId] = refunds[bet.userId].add(bet.amount);
       else refunds[bet.userId] = BigNumber.from(bet.amount);
 
       bet.status = "cancelled";
