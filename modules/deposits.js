@@ -22,6 +22,8 @@ async function processTransaction(transaction) {
   session.startTransaction();
   try {
     const { hash, value, from } = transaction;
+    if (!hash) return;
+
     const txCount = await Transaction.count({ txHash: hash }).session(session);
     if (txCount !== 0) throw new Error(`Tx ${hash} has been already processed`);
 
