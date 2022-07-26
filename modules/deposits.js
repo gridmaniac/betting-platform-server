@@ -51,6 +51,9 @@ async function processTransaction(transaction) {
 }
 
 async function processTransactions(lastBlockNumber, blockNumber) {
+  if (!lastBlockNumber || !blockNumber)
+    throw new Error("For some reasone blockNumber was undefined");
+
   const transactions = await etherScan.getTokenTransactionsByAddress(
     process.env.CONTRACT_ADDRESS,
     process.env.HOT_ADDRESS,
