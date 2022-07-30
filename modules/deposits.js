@@ -63,7 +63,9 @@ async function processTransactions(lastBlockNumber, blockNumber) {
     blockNumber
   );
 
-  for (const tx of transactions.filter((x) => x.to === process.env.HOT_ADDRESS))
+  for (const tx of transactions.filter(
+    (x) => x.to === process.env.HOT_ADDRESS.toLowerCase()
+  ))
     await processTransaction(tx);
 }
 
