@@ -54,7 +54,7 @@ async function processTransaction(transaction) {
 
 async function processTransactions(lastBlockNumber, blockNumber) {
   if (!lastBlockNumber || !blockNumber)
-    throw new Error("For some reasone blockNumber was undefined");
+    throw new Error("For some reason blockNumber was undefined");
 
   const transactions = await etherScan.getTokenTransactionsByAddress(
     process.env.CONTRACT_ADDRESS,
@@ -63,7 +63,8 @@ async function processTransactions(lastBlockNumber, blockNumber) {
     blockNumber
   );
 
-  for (const tx of transactions) await processTransaction(tx);
+  for (const tx of transactions.filter((x) => x.to === process.env.HOT_ADDRESS))
+    await processTransaction(tx);
 }
 
 module.exports.runDeposits = async function () {

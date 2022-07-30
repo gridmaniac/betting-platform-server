@@ -26,45 +26,43 @@ async function processNextClosedEvent() {
     event.processed = true;
     await event.save({ session });
 
-    const bets = await Bet.find({
+    const allBets = await Bet.find({
       status: "open",
       eventId: event.id,
     }).session(session);
 
     const profits = {};
-    for (const bet of bets) {
-      switch (bet.type) {
-        case "winner":
-          const { winnerId } = event;
-          if (bet.winnerId !== winnerId) break;
-          const pool = bets.filter((x) => x.type === bet.type);
-          const positiveHouse = pool
-            .filter((x) => x.winnerId === bet.winnerId)
-            .reduce(
-              (a, b) => a.add(BigNumber.from(b.amount)),
-              BigNumber.from(0)
-            );
 
-          const negativeHouse = pool
-            .filter((x) => x.winnerId !== bet.winnerId)
-            .reduce(
-              (a, b) => a.add(BigNumber.from(b.amount)),
-              BigNumber.from(0)
-            );
+    // WINNER
+    {
+      const { winnerId } = event;
+      const bets = allBets.filter((x) => x.type === "winner");
+      const positiveHouse = bets
+        .filter((x) => x.winnerId === bet.winnerId)
+        .reduce((a, b) => a.add(BigNumber.from(b.amount)), BigNumber.from(0));
 
+      const negativeHouse = bets
+        .filter((x) => x.winnerId !== bet.winnerId)
+        .reduce((a, b) => a.add(BigNumber.from(b.amount)), BigNumber.from(0));
+
+      for (const bet of bets) {
+        let profit;
+        if (positiveHouse.eq(0)) profit = BigNumber.from(bet.amount);
+        if (bet.winnerId === winnerId) {
           const ratio = BN(bet.amount).div(positiveHouse.toString());
-          const profit = BigNumber.from(
+          profit = BigNumber.from(
             ratio.times(negativeHouse.toString()).toFixed(0)
           ).add(bet.amount);
+        }
 
+        if (profit)
           if (bet.userId in profits)
             profits[bet.userId] = profits[bet.userId].add(profit);
           else profits[bet.userId] = profit;
-          break;
-      }
 
-      bet.status = "settled";
-      await bet.save({ session });
+        bet.status = "settled";
+        await bet.save({ session });
+      }
     }
 
     for (const userId in profits) {
