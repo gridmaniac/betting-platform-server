@@ -38,11 +38,11 @@ async function processNextClosedEvent() {
       const { winnerId } = event;
       const bets = allBets.filter((x) => x.type === "winner");
       const positiveHouse = bets
-        .filter((x) => x.winnerId === bet.winnerId)
+        .filter((x) => x.winnerId === winnerId)
         .reduce((a, b) => a.add(BigNumber.from(b.amount)), BigNumber.from(0));
 
       const negativeHouse = bets
-        .filter((x) => x.winnerId !== bet.winnerId)
+        .filter((x) => x.winnerId !== winnerId)
         .reduce((a, b) => a.add(BigNumber.from(b.amount)), BigNumber.from(0));
 
       for (const bet of bets) {
