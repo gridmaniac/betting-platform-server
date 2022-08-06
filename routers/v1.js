@@ -30,7 +30,13 @@ router.get("/seasons/:sport", async (req, res) => {
 
 router.get("/events/:seasonId", async (req, res) => {
   const { seasonId } = req.params;
-  const events = await Event.find({ seasonId }, null, {
+  const { isUpcoming } = req.query;
+  const status =
+    isUpcoming === "true"
+      ? { status: { $ne: "closed" } }
+      : { status: "closed" };
+
+  const events = await Event.find({ seasonId, ...status }, null, {
     sort: {
       startTime: 1,
     },
