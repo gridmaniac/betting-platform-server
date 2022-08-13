@@ -5,6 +5,8 @@ const { BigNumber } = require("ethers");
 const Setting = require("../models/setting");
 const Transaction = require("../models/transaction");
 const User = require("../models/user");
+const Balance = require("../models/balance");
+const Asset = require("../models/asset");
 
 async function delay(time) {
   return new Promise((resolve) => {
@@ -12,12 +14,7 @@ async function delay(time) {
   });
 }
 
-const etherScan = new EtherScan(
-  process.env.ETHERSCAN_API_URL,
-  process.env.ETHERSCAN_API_KEY
-);
-
-async function processTransaction(transaction) {
+async function processTransaction(transaction, code) {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
@@ -30,13 +27,21 @@ async function processTransaction(transaction) {
     const user = await User.findOne({ address: from }).session(session);
     if (user === null) throw new Error(`Address ${from} not found`);
 
-    const amount = BigNumber.from(user.balance);
-    user.balance = amount.add(value);
-    await user.save({ session });
+    const balance = await Balance.findOne({ userId: user.id, code }).session(
+      session
+    );
+
+    if (balance === null)
+      throw new Error(`Balance for ${user.email} not found`);
+
+    const amount = BigNumber.from(balance.amount);
+    balance.amount = amount.add(value);
+    await balance.save({ session });
 
     const tx = new Transaction({
       userId: user.id,
       txHash: hash,
+      asset,
       amount: value,
       type: "deposit",
       date: moment.utc(),
@@ -52,12 +57,20 @@ async function processTransaction(transaction) {
   }
 }
 
-async function processTransactions(lastBlockNumber, blockNumber) {
+async function processTransactions(lastBlockNumber, blockNumber, code) {
   if (!lastBlockNumber || !blockNumber)
     throw new Error("For some reason blockNumber was undefined");
 
+  const apiUrl = await Setting.findOne({ name: "ETHERSCAN_API_URL" });
+  if (!apiUrl) throw new Error("ETHERSCAN_API_URL is missing.");
+
+  const apiKey = await Setting.findOne({ name: "ETHERSCAN_API_KEY" });
+  if (!apiKey) throw new Error("ETHERSCAN_API_KEY is missing.");
+
+  const etherScan = new EtherScan(apiUrl.value, apiKey.value);
+  const asset = await Asset.findOne({ code });
   const transactions = await etherScan.getTokenTransactionsByAddress(
-    process.env.CONTRACT_ADDRESS,
+    asset.contract,
     process.env.HOT_ADDRESS,
     lastBlockNumber,
     blockNumber
@@ -66,16 +79,23 @@ async function processTransactions(lastBlockNumber, blockNumber) {
   for (const tx of transactions.filter(
     (x) => x.to === process.env.HOT_ADDRESS.toLowerCase()
   ))
-    await processTransaction(tx);
+    await processTransaction(tx, code);
 }
 
 module.exports.runDeposits = async function () {
   while (true) {
     await delay(30000);
     try {
+      const apiUrl = await Setting.findOne({ name: "ETHERSCAN_API_URL" });
+      if (!apiUrl) throw new Error("ETHERSCAN_API_URL is missing.");
+
+      const apiKey = await Setting.findOne({ name: "ETHERSCAN_API_KEY" });
+      if (!apiKey) throw new Error("ETHERSCAN_API_KEY is missing.");
+
+      const etherScan = new EtherScan(apiUrl.value, apiKey.value);
       const blockNumber = await etherScan.getBlockNumber();
       const blockNumberSetting = await Setting.findOne({
-        name: "blockNumber",
+        name: "BLOCK_NUMBER",
       });
 
       const lastBlockNumber = blockNumberSetting
@@ -84,9 +104,9 @@ module.exports.runDeposits = async function () {
 
       await processTransactions(lastBlockNumber, blockNumber);
       await Setting.findOneAndUpdate(
-        { name: "blockNumber" },
+        { name: "BLOCK_NUMBER" },
         {
-          name: "blockNumber",
+          name: "BLOCK_NUMBER",
           value: blockNumber,
         },
         { upsert: true }

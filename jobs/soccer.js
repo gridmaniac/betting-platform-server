@@ -3,18 +3,26 @@ const SoccerSeasonMapper = require("../mappers/SoccerSeasonMapper");
 const SoccerEventMapper = require("../mappers/SoccerEventMapper");
 const Event = require("../models/event");
 const Season = require("../models/season");
+const Setting = require("../models/setting");
 const moment = require("moment");
 
 module.exports.runJob = async function () {
   try {
+    const apiKey = await Setting.findOne({ name: "SPORTRADAR_SOCCER_API_KEY" });
+    if (!apiKey) throw new Error("SPORTRADAR_SOCCER_API_KEY is missing.");
+
     const mmaRadar = new SportRadar(
       "https://api.sportradar.com/soccer/trial/v4/en",
-      process.env.SPORTRADAR_SOCCER_API_KEY
+      apiKey.value
     );
 
     const minDate = moment().subtract(1, "day");
     const seasons = await mmaRadar.getSeasons();
-    const competitions = process.env.SOCCER_COMPETITIONS?.split(",") || [];
+    const soccerCompetitions = await Setting.findOne({
+      name: "SOCCER_COMPETITIONS",
+    });
+
+    const competitions = soccerCompetitions?.value?.split(",") || [];
     const filteredSeasons = seasons.filter((x) => {
       return (
         competitions.indexOf(x["competition_id"]) !== -1 &&

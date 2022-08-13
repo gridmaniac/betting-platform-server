@@ -1,11 +1,16 @@
 const pug = require("pug");
 const fs = require("fs");
 const path = require("path");
-const sgMail = require("@sendgrid/mail");
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+const Setting = require("../models/setting");
 
 async function sendMail(to, subject, html) {
   try {
+    const apiKey = await Setting.findOne({ name: "SENDGRID_API_KEY" });
+    if (!apiKey) throw new Error("SENDGRID_API_KEY is missing.");
+
+    const sgMail = require("@sendgrid/mail");
+    sgMail.setApiKey(apiKey.value);
+
     const msg = {
       to,
       from: "anton@koacombat.com",
@@ -15,7 +20,7 @@ async function sendMail(to, subject, html) {
 
     await sgMail.send(msg);
   } catch (e) {
-    console.error(e.message);
+    console.error("Mail: ", e.message);
   }
 }
 
@@ -25,8 +30,9 @@ module.exports.sendEmailConfirmation = async function (to, userId) {
     "utf-8"
   );
 
+  const domain = await Setting.findOne({ name: "DOMAIN" });
   const html = pug.render(template, {
-    confirmationLink: `${process.env.DOMAIN}?confirmationCode=${userId}`,
+    confirmationLink: `${domain?.value}?confirmationCode=${userId}`,
   });
   await sendMail(to, "Welcome to KOA Combat! Confirm Your Email", html);
 };

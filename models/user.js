@@ -18,14 +18,11 @@ const schema = new mongoose.Schema({
     type: String,
     default: "",
   },
-  balance: {
-    type: Number,
-    default: 0,
-  },
   isActive: {
     type: Boolean,
     default: false,
   },
+  role: String,
 });
 
 module.exports = mongoose.model("User", schema);

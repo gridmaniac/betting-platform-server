@@ -1,13 +1,31 @@
 const mongoose = require("mongoose");
-const moment = require("moment");
 
 const schema = new mongoose.Schema({
-  userId: String,
-  eventId: String,
+  userId: {
+    type: String,
+    required: true,
+  },
+  eventId: {
+    type: String,
+    required: true,
+  },
   date: Date,
-  type: String,
-  amount: Number,
-  status: String,
+  type: {
+    type: String,
+    required: true,
+  },
+  code: {
+    type: String,
+    required: true,
+  },
+  amount: {
+    type: Number,
+    required: true,
+  },
+  status: {
+    type: String,
+    required: true,
+  },
   winnerId: String,
   winner: String,
   season: String,

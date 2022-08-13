@@ -2,12 +2,18 @@ const mongoose = require("mongoose");
 
 const schema = new mongoose.Schema({
   id: String,
-  seasonId: String,
+  seasonId: {
+    type: String,
+    required: true,
+  },
   startTime: Date,
   startTimeConfirmed: Boolean,
   closeTime: Date,
   competitors: [mongoose.Schema.Types.Mixed],
-  status: String,
+  status: {
+    type: String,
+    required: true,
+  },
   processed: {
     type: Boolean,
     default: false,

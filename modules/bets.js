@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 const { BigNumber } = require("ethers");
 const BN = require("bignumber.js");
 const Transaction = require("../models/transaction");
-const User = require("../models/user");
+const Balance = require("../models/balance");
 const Event = require("../models/event");
 const Bet = require("../models/bet");
 const moment = require("moment");
@@ -31,55 +31,64 @@ async function processNextClosedEvent() {
       eventId: event.id,
     }).session(session);
 
-    const profits = {};
+    const pools = allBets.reduce((a, b) => {
+      if (b.code in a) a[b.code].push(b);
+      else a[b.code] = [b];
+      return a;
+    });
 
-    // WINNER
-    {
-      const { winnerId } = event;
-      const bets = allBets.filter((x) => x.type === "winner");
-      const positiveHouse = bets
-        .filter((x) => x.winnerId === winnerId)
-        .reduce((a, b) => a.add(BigNumber.from(b.amount)), BigNumber.from(0));
+    for (let code in pools) {
+      const profits = {};
 
-      const negativeHouse = bets
-        .filter((x) => x.winnerId !== winnerId)
-        .reduce((a, b) => a.add(BigNumber.from(b.amount)), BigNumber.from(0));
+      // WINNER
+      {
+        const { winnerId } = event;
+        const bets = pools[code].filter((x) => x.type === "winner");
+        const positiveHouse = bets
+          .filter((x) => x.winnerId === winnerId)
+          .reduce((a, b) => a.add(BigNumber.from(b.amount)), BigNumber.from(0));
 
-      for (const bet of bets) {
-        let profit;
-        if (positiveHouse.eq(0)) profit = BigNumber.from(bet.amount);
-        if (bet.winnerId === winnerId) {
-          const ratio = BN(bet.amount).div(positiveHouse.toString());
-          profit = BigNumber.from(
-            ratio.times(negativeHouse.toString()).toFixed(0)
-          ).add(bet.amount);
+        const negativeHouse = bets
+          .filter((x) => x.winnerId !== winnerId)
+          .reduce((a, b) => a.add(BigNumber.from(b.amount)), BigNumber.from(0));
+
+        for (const bet of bets) {
+          let profit;
+          if (positiveHouse.eq(0)) profit = BigNumber.from(bet.amount);
+          if (bet.winnerId === winnerId) {
+            const ratio = BN(bet.amount).div(positiveHouse.toString());
+            profit = BigNumber.from(
+              ratio.times(negativeHouse.toString()).toFixed(0)
+            ).add(bet.amount);
+          }
+
+          if (profit)
+            if (bet.userId in profits)
+              profits[bet.userId] = profits[bet.userId].add(profit);
+            else profits[bet.userId] = profit;
+
+          bet.status = "settled";
+          await bet.save({ session });
         }
-
-        if (profit)
-          if (bet.userId in profits)
-            profits[bet.userId] = profits[bet.userId].add(profit);
-          else profits[bet.userId] = profit;
-
-        bet.status = "settled";
-        await bet.save({ session });
       }
-    }
 
-    for (const userId in profits) {
-      const user = await User.findById(userId).session(session);
-      const bigBalance = BigNumber.from(user.balance);
+      for (const userId in profits) {
+        const balance = await Balance.find({ userId, code }).session(session);
+        const bigBalance = BigNumber.from(balance.amount);
 
-      user.balance = bigBalance.add(profits[userId]);
-      await user.save({ session });
+        balance.balance = bigBalance.add(profits[userId]);
+        await balance.save({ session });
 
-      const tx = new Transaction({
-        userId: userId,
-        amount: profits[userId],
-        type: "payoff",
-        date: moment.utc(),
-      });
+        const tx = new Transaction({
+          userId,
+          code,
+          amount: profits[userId],
+          type: "payoff",
+          date: moment.utc(),
+        });
 
-      await tx.save({ session });
+        await tx.save({ session });
+      }
     }
 
     await session.commitTransaction();
@@ -109,31 +118,40 @@ async function processNextCancelledEvent() {
       eventId: event.id,
     }).session(session);
 
-    const refunds = {};
-    for (const bet of bets) {
-      if (bet.userId in refunds)
-        refunds[bet.userId] = refunds[bet.userId].add(bet.amount);
-      else refunds[bet.userId] = BigNumber.from(bet.amount);
+    const pools = bets.reduce((a, b) => {
+      if (b.code in a) a[b.code].push(b);
+      else a[b.code] = [b];
+      return a;
+    });
 
-      bet.status = "cancelled";
-      await bet.save({ session });
-    }
+    for (let code in pools) {
+      const refunds = {};
+      for (const bet of pools[code]) {
+        if (bet.userId in refunds)
+          refunds[bet.userId] = refunds[bet.userId].add(bet.amount);
+        else refunds[bet.userId] = BigNumber.from(bet.amount);
 
-    for (const userId in refunds) {
-      const user = await User.findById(userId).session(session);
-      const bigBalance = BigNumber.from(user.balance);
+        bet.status = "cancelled";
+        await bet.save({ session });
+      }
 
-      user.balance = bigBalance.add(refunds[userId]);
-      await user.save({ session });
+      for (const userId in refunds) {
+        const balance = await Balance.find({ userId, code }).session(session);
+        const bigBalance = BigNumber.from(balance.amount);
 
-      const tx = new Transaction({
-        userId: userId,
-        amount: refunds[userId],
-        type: "refund",
-        date: moment.utc(),
-      });
+        balance.amount = bigBalance.add(refunds[userId]);
+        await balance.save({ session });
 
-      await tx.save({ session });
+        const tx = new Transaction({
+          userId,
+          code,
+          amount: refunds[userId],
+          type: "refund",
+          date: moment.utc(),
+        });
+
+        await tx.save({ session });
+      }
     }
 
     await session.commitTransaction();

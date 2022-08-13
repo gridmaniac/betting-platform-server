@@ -1,7 +1,7 @@
 const ERC20 = require("../modules/erc20");
-const contractABI = require("../modules/koa-combat-abi.json");
 const Transaction = require("../models/transaction");
 const Setting = require("../models/setting");
+const Asset = require("../models/asset");
 const { BigNumber } = require("ethers");
 
 async function delay(time) {
@@ -16,17 +16,26 @@ module.exports.runWithdrawals = async function () {
     const tx = await Transaction.findOne({ status: "pending" });
     if (!tx) continue;
     try {
+      const asset = await Asset.findOne({ code: tx.code });
+      if (!asset.listed) throw new Error("Asset is inactive.");
+
+      const web3HttpProvider = await Setting.findOne({
+        name: "WEB3_HTTP_PROVIDER",
+      });
+
+      if (!web3HttpProvider) throw new Error("WEB3_HTTP_PROVIDER is missing.");
+
       tx.status = "processed";
       await tx.save();
 
       const token = new ERC20(
-        process.env.CONTRACT_ADDRESS,
-        contractABI,
-        process.env.WEB3_HTTP_PROVIDER
+        asset.contract,
+        asset.contractABI,
+        web3HttpProvider.value
       );
 
       const gasLimitSetting = await Setting.findOne({
-        name: "gasLimit",
+        name: "GAS_LIMIT",
       });
 
       const bigAmount = BigNumber.from(tx.amount);

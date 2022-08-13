@@ -1,29 +1,33 @@
 const mongoose = require("mongoose");
 
 const schema = new mongoose.Schema({
-  userId: {
-    type: String,
-    required: true,
-  },
-  txHash: String,
   code: {
     type: String,
     required: true,
-  },
-  amount: {
-    type: String,
-    required: true,
+    unique: true,
   },
   type: {
     type: String,
     required: true,
   },
-  status: {
+  listed: {
+    type: Boolean,
+    default: false,
+  },
+  contract: String,
+  contractABI: String,
+  decimals: {
+    type: Number,
+    required: true,
+  },
+  minWithdrawal: {
     type: String,
     required: true,
   },
-  address: String,
-  date: Date,
+  minStake: {
+    type: String,
+    required: true,
+  },
 });
 
-module.exports = mongoose.model("Transaction", schema);
+module.exports = mongoose.model("Asset", schema);

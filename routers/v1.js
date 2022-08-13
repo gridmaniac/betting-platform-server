@@ -9,13 +9,14 @@ const moment = require("moment");
 const { BigNumber } = require("ethers");
 const { sendEmailConfirmation, sendResetPassword } = require("../modules/mail");
 const generator = require("generate-password");
-const { processTransactions } = require("../modules/deposits");
 
 const Event = require("../models/event");
 const Season = require("../models/season");
 const User = require("../models/user");
 const Transaction = require("../models/transaction");
 const Bet = require("../models/bet");
+const Balance = require("../models/balance");
+const Asset = require("../models/asset");
 
 router.get("/seasons/:sport", async (req, res) => {
   const { sport } = req.params;
@@ -162,31 +163,40 @@ router.post("/password/reset", async (req, res) => {
 });
 
 router.get(
-  "/wallet",
+  "/wallet/:code",
   passport.authenticate("jwt", { session: false }),
   async (req, res) => {
-    const { id: userId, address, balance } = req.user;
-    const transactions = await Transaction.find({ userId }, null, {
+    const { code } = req.params;
+    const { id: userId, address } = req.user;
+    const transactions = await Transaction.find({ userId, code }, null, {
       sort: {
         date: -1,
       },
     });
 
-    const bets = await Bet.find({ userId, status: "open" });
+    const bets = await Bet.find({ userId, code, status: "open" });
     const inBets = bets.reduce(
       (a, b) => a.add(BigNumber.from(b.amount)),
       BigNumber.from(0)
     );
 
+    let balance = await Balance.findOne({ userId, code });
+    if (balance === null) {
+      balance = new Balance({ userId, code });
+      await balance.save({ session });
+    }
+
+    const asset = await Asset.findOne({ code });
     res.json({
       address,
-      balance,
+      balance: balance.amount,
       inBets: inBets.toString(),
-      decimals: process.env.DECIMALS,
+      decimals: asset.decimals,
       hotAddress: process.env.HOT_ADDRESS,
-      contractAddress: process.env.CONTRACT_ADDRESS,
+      contractAddress: asset.contract,
       transactions: transactions.map((x) => ({
         txHash: x.txHash,
+        code: x.code,
         amount: x.amount,
         date: x.date,
         type: x.type,
@@ -215,32 +225,33 @@ router.post(
   "/wallet/withdraw",
   passport.authenticate("jwt", { session: false }),
   async (req, res) => {
-    const { amount } = req.body;
+    const { amount, code } = req.body;
     const { id: userId } = req.user;
 
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
+      const asset = await Asset.findOne({ code }).session(session);
+      if (!asset.listed) throw new Error("Asset is inactive.");
+
       const bigAmount = BigNumber.from(amount);
-      if (bigAmount.lt(process.env.MIN_WITHDRAWAL))
-        throw new Error(
-          `Min. amount: ${process.env.MIN_WITHDRAWAL.slice(
-            0,
-            -process.env.DECIMALS
-          )}`
-        );
+      const minWithdrawal = BigNumber(asset.minWithdrawal).mul(asset.decimals);
+      if (bigAmount.lt(minWithdrawal))
+        throw new Error(`Min. amount: ${asset.minWithdrawal}`);
 
       const user = await User.findById(userId).session(session);
       if (!user.address) throw new Error("Wallet address was not specified.");
 
-      const bigBalance = BigNumber.from(user.balance);
+      const balance = await Balance.findOne({ userId, code }).session(session);
+      const bigBalance = BigNumber.from(balance.amount);
       if (bigAmount.gt(bigBalance)) throw new Error("Insufficient balance.");
 
-      user.balance = bigBalance.sub(bigAmount);
-      await user.save({ session });
+      balance.amount = bigBalance.sub(bigAmount);
+      await balance.save({ session });
 
       const tx = new Transaction({
         userId,
+        asset,
         amount: bigAmount,
         type: "withdrawal",
         status: "pending",
@@ -279,23 +290,24 @@ router.post(
   passport.authenticate("jwt", { session: false }),
   async (req, res) => {
     const { id: userId } = req.user;
-    const { eventId, type, amount, winnerId } = req.body;
+    const { eventId, type, code, amount, winnerId } = req.body;
     const modelErrors = {};
 
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
+      const asset = await Asset.findOne({ code }).session(session);
+      if (!asset.listed) throw new Error("Asset is inactive.");
+
       const bigAmount = BigNumber.from(amount);
-      if (bigAmount.lt(process.env.MIN_STAKE)) {
-        modelErrors.amount = `Min. stake: ${process.env.MIN_STAKE.slice(
-          0,
-          -process.env.DECIMALS
-        )}`;
+      const minStake = BigNumber(asset.minStake).mul(asset.decimals);
+      if (bigAmount.lt(minStake)) {
+        modelErrors.amount = `Min. stake: ${asset.minStake}`;
         throw new Error();
       }
 
-      const user = await User.findById(userId).session(session);
-      const bigBalance = BigNumber.from(user.balance);
+      const balance = await User.findOne({ userId, code }).session(session);
+      const bigBalance = BigNumber.from(balance.amount);
       if (bigAmount.gt(bigBalance)) {
         modelErrors.amount = "Insufficient balance.";
         throw new Error();
@@ -308,14 +320,15 @@ router.post(
       )
         throw new Error("Betting on this event is already closed.");
 
-      user.balance = bigBalance.sub(bigAmount);
-      await user.save({ session });
+      balance.amount = bigBalance.sub(bigAmount);
+      await balance.save({ session });
 
       const season = await Season.findOne({ id: event.seasonId });
       const bet = new Bet({
         userId,
         eventId,
         type,
+        code,
         amount,
         status: "open",
         winnerId,
@@ -328,6 +341,7 @@ router.post(
       await bet.save({ session });
       const tx = new Transaction({
         userId,
+        code,
         amount: bigAmount,
         type: "stake",
         date: moment.utc(),
@@ -345,15 +359,9 @@ router.post(
   }
 );
 
-router.post("/deposits", async (req, res) => {
-  const { lastBlockNumber, blockNumber } = req.body;
-  try {
-    await processTransactions(lastBlockNumber, blockNumber);
-  } catch (e) {
-    return res.json({ data: false });
-  }
-
-  res.json({ data: true });
+router.get("/assets", async (req, res) => {
+  const assets = await Asset.find({ listed: true });
+  res.json({ data: assets });
 });
 
 module.exports = router;
