@@ -102,7 +102,10 @@ module.exports.runDeposits = async function () {
         ? blockNumberSetting.value
         : blockNumber;
 
-      await processTransactions(lastBlockNumber, blockNumber);
+      const assets = await Asset.find({ listed: true });
+      for (let x of assets)
+        await processTransactions(lastBlockNumber, blockNumber, x.code);
+
       await Setting.findOneAndUpdate(
         { name: "BLOCK_NUMBER" },
         {
