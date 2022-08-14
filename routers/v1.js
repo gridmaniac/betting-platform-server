@@ -163,6 +163,15 @@ router.post("/password/reset", async (req, res) => {
 });
 
 router.get(
+  "/profile",
+  passport.authenticate("jwt", { session: false }),
+  async (req, res) => {
+    const { email, role } = req.user;
+    res.json({ email, role });
+  }
+);
+
+router.get(
   "/wallet/:code",
   passport.authenticate("jwt", { session: false }),
   async (req, res) => {
