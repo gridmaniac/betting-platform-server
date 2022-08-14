@@ -35,7 +35,7 @@ async function processNextClosedEvent() {
       if (b.code in a) a[b.code].push(b);
       else a[b.code] = [b];
       return a;
-    });
+    }, {});
 
     for (let code in pools) {
       const profits = {};
@@ -122,7 +122,7 @@ async function processNextCancelledEvent() {
       if (b.code in a) a[b.code].push(b);
       else a[b.code] = [b];
       return a;
-    });
+    }, {});
 
     for (let code in pools) {
       const refunds = {};
