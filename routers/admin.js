@@ -8,6 +8,7 @@ const Asset = require("../models/asset");
 const Transaction = require("../models/transaction");
 const Bet = require("../models/bet");
 const User = require("../models/user");
+const Balance = require("../models/balance");
 
 router.use(
   passport.authenticate("jwt", { session: false }),
@@ -117,6 +118,11 @@ router.get("/users", async (req, res) => {
   });
 
   res.json({ data: users });
+});
+
+router.get("/balances", async (req, res) => {
+  const balances = await Balance.find({});
+  res.json({ data: balances });
 });
 
 module.exports = router;
