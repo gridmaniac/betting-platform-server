@@ -192,13 +192,13 @@ router.get(
     let balance = await Balance.findOne({ userId, code });
     if (balance === null) {
       balance = new Balance({ userId, code });
-      await balance.save({ session });
+      await balance.save();
     }
 
     const asset = await Asset.findOne({ code });
     res.json({
       address,
-      balance: balance.amount,
+      balance: balance.amount.toString(),
       inBets: inBets.toString(),
       decimals: asset.decimals,
       hotAddress: process.env.HOT_ADDRESS,
