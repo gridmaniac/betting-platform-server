@@ -18,10 +18,7 @@ const schema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  status: {
-    type: String,
-    required: true,
-  },
+  status: String,
   address: String,
   date: Date,
 });
