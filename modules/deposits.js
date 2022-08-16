@@ -41,7 +41,7 @@ async function processTransaction(transaction, code) {
     const tx = new Transaction({
       userId: user.id,
       txHash: hash,
-      asset,
+      code,
       amount: value,
       type: "deposit",
       date: moment.utc(),

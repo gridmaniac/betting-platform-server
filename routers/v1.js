@@ -260,7 +260,7 @@ router.post(
 
       const tx = new Transaction({
         userId,
-        asset,
+        code,
         amount: bigAmount,
         type: "withdrawal",
         status: "pending",
