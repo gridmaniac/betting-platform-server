@@ -30,7 +30,7 @@ module.exports.runWithdrawals = async function () {
 
       const token = new ERC20(
         asset.contract,
-        asset.contractABI,
+        JSON.parse(asset.contractABI),
         web3HttpProvider.value
       );
 
