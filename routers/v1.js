@@ -245,8 +245,9 @@ router.post(
 
       const bigAmount = BigNumber.from(amount);
       const minWithdrawal = BigNumber.from(asset.minWithdrawal).mul(
-        asset.decimals
+        Math.pow(10, asset.decimals)
       );
+
       if (bigAmount.lt(minWithdrawal))
         throw new Error(`Min. amount: ${asset.minWithdrawal}`);
 
@@ -310,7 +311,9 @@ router.post(
       if (!asset.listed) throw new Error("Asset is inactive.");
 
       const bigAmount = BigNumber.from(amount);
-      const minStake = BigNumber.from(asset.minStake).mul(asset.decimals);
+      const minStake = BigNumber.from(asset.minStake).mul(
+        Math.pow(10, asset.decimals)
+      );
       if (bigAmount.lt(minStake)) {
         throw new Error(`Min. stake: ${asset.minStake}`);
       }
