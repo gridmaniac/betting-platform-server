@@ -315,7 +315,7 @@ router.post(
         throw new Error(`Min. stake: ${asset.minStake}`);
       }
 
-      const balance = await User.findOne({ userId, code }).session(session);
+      const balance = await Balance.findOne({ userId, code }).session(session);
       const bigBalance = BigNumber.from(balance.amount);
       if (bigAmount.gt(bigBalance)) {
         throw new Error("Insufficient balance.");
@@ -342,6 +342,7 @@ router.post(
         winnerId,
         winner: event.competitors.find((x) => x.id === winnerId).name,
         season: season.name,
+        sport: season.sport,
         startTime: event.startTime,
         date: moment.utc(),
       });

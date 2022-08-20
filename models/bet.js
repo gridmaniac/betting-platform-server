@@ -29,6 +29,7 @@ const schema = new mongoose.Schema({
   winnerId: String,
   winner: String,
   season: String,
+  sport: String,
   startTime: Date,
 });
 
