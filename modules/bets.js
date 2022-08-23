@@ -73,9 +73,11 @@ async function processNextClosedEvent() {
       }
 
       for (const userId in profits) {
-        const balance = await Balance.find({ userId, code }).session(session);
-        const bigBalance = BigNumber.from(balance.amount);
+        const balance = await Balance.findOne({ userId, code }).session(
+          session
+        );
 
+        const bigBalance = BigNumber.from(balance.amount);
         balance.balance = bigBalance.add(profits[userId]);
         await balance.save({ session });
 
@@ -136,9 +138,11 @@ async function processNextCancelledEvent() {
       }
 
       for (const userId in refunds) {
-        const balance = await Balance.find({ userId, code }).session(session);
-        const bigBalance = BigNumber.from(balance.amount);
+        const balance = await Balance.findOne({ userId, code }).session(
+          session
+        );
 
+        const bigBalance = BigNumber.from(balance.amount);
         balance.amount = bigBalance.add(refunds[userId]);
         await balance.save({ session });
 
