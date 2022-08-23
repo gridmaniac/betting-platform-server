@@ -4,7 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "test:process": "node tests/process-open-bets.spec.js",
+    "test:cancel": "node tests/cancel-open-bets.spec.js"
   },
   "keywords": [],
   "author": "",
@@ -25,6 +27,7 @@
     "passport-jwt": "^4.0.0",
     "password-validator": "^5.2.1",
     "pug": "^3.0.2",
+    "sharp": "^0.30.7",
     "web3": "^1.7.4"
   },
   "devDependencies": {}

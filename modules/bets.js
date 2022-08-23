@@ -1,11 +1,11 @@
 const mongoose = require("mongoose");
 const { BigNumber } = require("ethers");
-const BN = require("bignumber.js");
 const Transaction = require("../models/transaction");
 const Balance = require("../models/balance");
 const Event = require("../models/event");
 const Bet = require("../models/bet");
 const moment = require("moment");
+const { processOpenBets } = require("./bets-processor");
 
 async function delay(time) {
   return new Promise((resolve) => {
@@ -26,59 +26,26 @@ async function processNextClosedEvent() {
     event.processed = true;
     await event.save({ session });
 
-    const allBets = await Bet.find({
+    const bets = await Bet.find({
       status: "open",
       eventId: event.id,
     }).session(session);
 
-    const pools = allBets.reduce((a, b) => {
-      if (b.code in a) a[b.code].push(b);
-      else a[b.code] = [b];
-      return a;
-    }, {});
+    const poolProfits = processOpenBets(event, bets);
+    for (const bet of bets) {
+      bet.status = "settled";
+      await bet.save({ session });
+    }
 
-    for (let code in pools) {
-      const profits = {};
-
-      // WINNER
-      {
-        const { winnerId } = event;
-        const bets = pools[code].filter((x) => x.type === "winner");
-        const positiveHouse = bets
-          .filter((x) => x.winnerId === winnerId)
-          .reduce((a, b) => a.add(BigNumber.from(b.amount)), BigNumber.from(0));
-
-        const negativeHouse = bets
-          .filter((x) => x.winnerId !== winnerId)
-          .reduce((a, b) => a.add(BigNumber.from(b.amount)), BigNumber.from(0));
-
-        for (const bet of bets) {
-          let profit;
-          if (positiveHouse.eq(0)) profit = BigNumber.from(bet.amount);
-          if (bet.winnerId === winnerId) {
-            const ratio = BN(bet.amount).div(positiveHouse.toString());
-            profit = BigNumber.from(
-              ratio.times(negativeHouse.toString()).toFixed(0)
-            ).add(bet.amount);
-          }
-
-          if (profit)
-            if (bet.userId in profits)
-              profits[bet.userId] = profits[bet.userId].add(profit);
-            else profits[bet.userId] = profit;
-
-          bet.status = "settled";
-          await bet.save({ session });
-        }
-      }
-
-      for (const userId in profits) {
+    for (const code in poolProfits) {
+      for (const userId in poolProfits[code]) {
         const balance = await Balance.findOne({ userId, code }).session(
           session
         );
 
+        const profits = poolProfits[code];
         const bigBalance = BigNumber.from(balance.amount);
-        balance.balance = bigBalance.add(profits[userId]);
+        balance.amount = bigBalance.add(profits[userId]);
         await balance.save({ session });
 
         const tx = new Transaction({
@@ -120,28 +87,19 @@ async function processNextCancelledEvent() {
       eventId: event.id,
     }).session(session);
 
-    const pools = bets.reduce((a, b) => {
-      if (b.code in a) a[b.code].push(b);
-      else a[b.code] = [b];
-      return a;
-    }, {});
+    const poolRefunds = cancelOpenBets(bets);
+    for (const bet of bets) {
+      bet.status = "cancelled";
+      await bet.save({ session });
+    }
 
-    for (let code in pools) {
-      const refunds = {};
-      for (const bet of pools[code]) {
-        if (bet.userId in refunds)
-          refunds[bet.userId] = refunds[bet.userId].add(bet.amount);
-        else refunds[bet.userId] = BigNumber.from(bet.amount);
-
-        bet.status = "cancelled";
-        await bet.save({ session });
-      }
-
-      for (const userId in refunds) {
+    for (const code in poolRefunds) {
+      for (const userId in poolRefunds[code]) {
         const balance = await Balance.findOne({ userId, code }).session(
           session
         );
 
+        const refunds = poolRefunds[code];
         const bigBalance = BigNumber.from(balance.amount);
         balance.amount = bigBalance.add(refunds[userId]);
         await balance.save({ session });
