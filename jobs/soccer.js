@@ -11,13 +11,12 @@ module.exports.runJob = async function () {
     const apiKey = await Setting.findOne({ name: "SPORTRADAR_SOCCER_API_KEY" });
     if (!apiKey) throw new Error("SPORTRADAR_SOCCER_API_KEY is missing.");
 
-    const mmaRadar = new SportRadar(
-      "https://api.sportradar.com/soccer/trial/v4/en",
-      apiKey.value
-    );
+    const apiUrl = await Setting.findOne({ name: "SPORTRADAR_SOCCER_API_URL" });
+    if (!apiUrl) throw new Error("SPORTRADAR_SOCCER_API_URL is missing.");
+    const radar = new SportRadar(apiUrl.value, apiKey.value);
 
     const minDate = moment().subtract(1, "day");
-    const seasons = await mmaRadar.getSeasons();
+    const seasons = await radar.getSeasons();
     const soccerCompetitions = await Setting.findOne({
       name: "SOCCER_COMPETITIONS",
     });
@@ -36,7 +35,7 @@ module.exports.runJob = async function () {
         upsert: true,
       });
 
-      const summaries = await mmaRadar.getSeasonSummaries(dto.id);
+      const summaries = await radar.getSeasonSummaries(dto.id);
       for (const record of summaries) {
         const { dto } = new SoccerEventMapper(record);
         const session = await Event.startSession();

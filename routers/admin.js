@@ -20,7 +20,12 @@ router.use(
 );
 
 router.get("/settings", async (req, res) => {
-  const settings = await Setting.find({});
+  const settings = await Setting.find({}, null, {
+    sort: {
+      name: 1,
+    },
+  });
+
   res.json({ data: settings });
 });
 
