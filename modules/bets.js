@@ -5,7 +5,7 @@ const Balance = require("../models/balance");
 const Event = require("../models/event");
 const Bet = require("../models/bet");
 const moment = require("moment");
-const { processOpenBets } = require("./bets-processor");
+const { processOpenBets, cancelOpenBets } = require("./bets-processor");
 
 async function delay(time) {
   return new Promise((resolve) => {
