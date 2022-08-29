@@ -1,18 +1,13 @@
-const cron = require("node-cron");
+if (!process.env.MONGODB_WITH_CERT) require("./modules/db-with-cert");
+else require("./modules/db");
 
-require("./modules/db");
 require("./modules/auth");
 require("./modules/server");
+require("./modules/jobs");
 
 process.on("uncaughtException", function (err) {
   console.error(err);
 });
-
-if (process.env.MMA_CRON)
-  cron.schedule(process.env.MMA_CRON, require("./jobs/mma").runJob);
-
-if (process.env.SOCCER_CRON)
-  cron.schedule(process.env.SOCCER_CRON, require("./jobs/soccer").runJob);
 
 if (!process.env.DISABLE_DEPOSITS_MODULE)
   require("./modules/deposits").runDeposits();
