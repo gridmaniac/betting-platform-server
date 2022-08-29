@@ -1,4 +1,4 @@
-if (!process.env.MONGODB_WITH_CERT) require("./modules/db-with-cert");
+if (process.env.MONGODB_WITH_CERT) require("./modules/db-with-cert");
 else require("./modules/db");
 
 require("./modules/auth");
