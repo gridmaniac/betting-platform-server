@@ -11,9 +11,12 @@ async function sendMail(to, subject, html) {
     const sgMail = require("@sendgrid/mail");
     sgMail.setApiKey(apiKey.value);
 
+    const from = await Setting.findOne({ name: "SENDGRID_FROM" });
+    if (!from) throw new Error("SENDGRID_FROM is missing.");
+
     const msg = {
       to,
-      from: "anton@koacombat.com",
+      from: from.value,
       subject,
       html,
     };
