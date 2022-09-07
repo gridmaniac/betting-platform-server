@@ -110,7 +110,7 @@ module.exports.runDeposits = async function () {
       for (let x of assets)
         await processTransactions(
           lastBlockNumber,
-          blockNumber - confirmationNumberSetting,
+          blockNumber - confirmationNumberSetting.value,
           x.code
         );
 
@@ -118,7 +118,7 @@ module.exports.runDeposits = async function () {
         { name: "BLOCK_NUMBER" },
         {
           name: "BLOCK_NUMBER",
-          value: blockNumber - confirmationNumberSetting,
+          value: blockNumber - confirmationNumberSetting.value,
         },
         { upsert: true }
       );
