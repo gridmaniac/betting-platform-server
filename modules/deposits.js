@@ -22,7 +22,7 @@ async function processTransaction(transaction, code) {
     if (!hash) return;
 
     const txCount = await Transaction.count({ txHash: hash }).session(session);
-    if (txCount !== 0) throw new Error(`Tx ${hash} has been already processed`);
+    if (txCount !== 0) return;
 
     const user = await User.findOne({ address: from }).session(session);
     if (user === null) throw new Error(`Address ${from} not found`);
@@ -98,13 +98,21 @@ module.exports.runDeposits = async function () {
         name: "BLOCK_NUMBER",
       });
 
+      const confirmationNumberSetting = await Setting.findOne({
+        name: "CONFIRMATION_NUMBER",
+      });
+
       const lastBlockNumber = blockNumberSetting
         ? blockNumberSetting.value
         : blockNumber;
 
       const assets = await Asset.find({ listed: true });
       for (let x of assets)
-        await processTransactions(lastBlockNumber, blockNumber, x.code);
+        await processTransactions(
+          lastBlockNumber - confirmationNumberSetting,
+          blockNumber - confirmationNumberSetting,
+          x.code
+        );
 
       await Setting.findOneAndUpdate(
         { name: "BLOCK_NUMBER" },
