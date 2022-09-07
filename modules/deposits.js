@@ -109,7 +109,7 @@ module.exports.runDeposits = async function () {
       const assets = await Asset.find({ listed: true });
       for (let x of assets)
         await processTransactions(
-          lastBlockNumber - confirmationNumberSetting,
+          lastBlockNumber,
           blockNumber - confirmationNumberSetting,
           x.code
         );
@@ -118,7 +118,7 @@ module.exports.runDeposits = async function () {
         { name: "BLOCK_NUMBER" },
         {
           name: "BLOCK_NUMBER",
-          value: blockNumber,
+          value: blockNumber - confirmationNumberSetting,
         },
         { upsert: true }
       );
