@@ -68,13 +68,23 @@ async function processTransactions(lastBlockNumber, blockNumber, code) {
   if (!apiKey) throw new Error("ETHERSCAN_API_KEY is missing.");
 
   const etherScan = new EtherScan(apiUrl.value, apiKey.value);
-  const asset = await Asset.findOne({ code });
-  const transactions = await etherScan.getTokenTransactionsByAddress(
-    asset.contract,
-    process.env.HOT_ADDRESS,
-    lastBlockNumber,
-    blockNumber
-  );
+
+  let transactions = [];
+  if (code === "eth") {
+    transactions = await etherScan.getEthTransactionsByAddress(
+      process.env.HOT_ADDRESS,
+      lastBlockNumber,
+      blockNumber
+    );
+  } else {
+    const asset = await Asset.findOne({ code });
+    transactions = await etherScan.getTokenTransactionsByAddress(
+      asset.contract,
+      process.env.HOT_ADDRESS,
+      lastBlockNumber,
+      blockNumber
+    );
+  }
 
   for (const tx of transactions.filter(
     (x) => x.to === process.env.HOT_ADDRESS.toLowerCase()
@@ -107,12 +117,15 @@ module.exports.runDeposits = async function () {
         : blockNumber;
 
       const assets = await Asset.find({ listed: true });
-      for (let x of assets)
+      for (let x of assets) {
         await processTransactions(
           lastBlockNumber,
           blockNumber - confirmationNumberSetting.value,
           x.code
         );
+
+        delay(1000);
+      }
 
       await Setting.findOneAndUpdate(
         { name: "BLOCK_NUMBER" },

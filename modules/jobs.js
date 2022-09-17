@@ -11,4 +11,8 @@ module.exports.runJobs = async function () {
 
   const nflCron = await Setting.findOne({ name: "NFL_CRON" });
   if (nflCron) cron.schedule(nflCron.value, require("../jobs/nfl").runJob);
+
+  const pricesCron = await Setting.findOne({ name: "PRICES_CRON" });
+  if (pricesCron)
+    cron.schedule(pricesCron.value, require("../jobs/prices").runJob);
 };

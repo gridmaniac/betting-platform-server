@@ -38,6 +38,31 @@ class EtherScan {
     });
     return data.result;
   }
+
+  async getEthTransactionsByAddress(address, startBlock, endBlock) {
+    const { data } = await this.api({
+      method: "get",
+      params: {
+        module: "account",
+        action: "txlist",
+        address,
+        startblock: startBlock,
+        endBlock: endBlock,
+      },
+    });
+    return data.result;
+  }
+
+  async getLastPrice() {
+    const { data } = await this.api({
+      method: "get",
+      params: {
+        module: "stats",
+        action: "ethprice",
+      },
+    });
+    return data.result;
+  }
 }
 
 module.exports = EtherScan;

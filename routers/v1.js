@@ -6,9 +6,12 @@ const jwt = require("jsonwebtoken");
 const passport = require("passport");
 const mongoose = require("mongoose");
 const moment = require("moment");
-const { BigNumber } = require("ethers");
+const { BigNumber, utils } = require("ethers");
+const BN = require("bignumber.js");
 const { sendEmailConfirmation, sendResetPassword } = require("../modules/mail");
 const generator = require("generate-password");
+const ERC20 = require("../modules/erc20");
+const Ethereum = require("../modules/ethereum");
 
 const Event = require("../models/event");
 const Season = require("../models/season");
@@ -17,6 +20,7 @@ const Transaction = require("../models/transaction");
 const Bet = require("../models/bet");
 const Balance = require("../models/balance");
 const Asset = require("../models/asset");
+const Setting = require("../models/setting");
 
 router.get("/seasons/:sport", async (req, res) => {
   const { sport } = req.params;
@@ -195,12 +199,20 @@ router.get(
       await balance.save();
     }
 
+    let ethBalance = await Balance.findOne({ userId, code: "eth" });
+    if (ethBalance === null) {
+      ethBalance = new Balance({ userId, code: "eth" });
+      await ethBalance.save();
+    }
+
     const asset = await Asset.findOne({ code });
     res.json({
       address,
       balance: balance.amount.toString(),
       inBets: inBets.toString(),
       decimals: asset.decimals,
+      ethBalance: ethBalance.amount.toString(),
+      ethDecimals: 18,
       hotAddress: process.env.HOT_ADDRESS,
       contractAddress: asset.contract,
       transactions: transactions.map((x) => ({
@@ -244,8 +256,9 @@ router.post(
       if (!asset.listed) throw new Error("Asset is inactive.");
 
       const bigAmount = BigNumber.from(amount);
-      const minWithdrawal = BigNumber.from(asset.minWithdrawal).mul(
-        Math.pow(10, asset.decimals)
+      const minWithdrawal = utils.parseUnits(
+        asset.minWithdrawal,
+        asset.decimals
       );
 
       if (bigAmount.lt(minWithdrawal))
@@ -258,8 +271,77 @@ router.post(
       const bigBalance = BigNumber.from(balance.amount);
       if (bigAmount.gt(bigBalance)) throw new Error("Insufficient balance.");
 
-      balance.amount = bigBalance.sub(bigAmount);
-      await balance.save({ session });
+      const web3HttpProvider = await Setting.findOne({
+        name: "WEB3_HTTP_PROVIDER",
+      });
+
+      if (!web3HttpProvider) throw new Error("WEB3_HTTP_PROVIDER is missing.");
+
+      const ethPrice = await Setting.findOne({
+        name: "ETH_PRICE",
+      });
+
+      if (!ethPrice) throw new Error("ETH_PRICE is missing.");
+
+      const ethTax = await Setting.findOne({
+        name: "ETH_TAX",
+      });
+
+      if (!ethTax) throw new Error("ETH_TAX is missing.");
+
+      const ethBalance = await Balance.findOne({ userId, code: "eth" });
+      const bigEthBalance = BigNumber.from(ethBalance.amount);
+
+      const wallet =
+        asset.type === "ethereum"
+          ? new Ethereum(web3HttpProvider.value)
+          : new ERC20(
+              asset.contract,
+              JSON.parse(asset.contractABI),
+              web3HttpProvider.value
+            );
+
+      const gasFee = await wallet.estimateGasFee(user.address, bigAmount);
+      const gasTax = BN(utils.parseUnits("1").toString())
+        .div(ethPrice.value)
+        .times(ethTax.value);
+
+      const gasFeeTaxed = gasFee.add(gasTax.toFixed(0));
+      if (gasFeeTaxed.gt(bigEthBalance))
+        throw new Error(
+          `Gas balance should be at least ${utils.formatUnits(
+            gasFeeTaxed
+          )} ETH.`
+        );
+
+      if (code === "eth") {
+        const bigTotalAmount = bigAmount.add(gasFeeTaxed);
+        if (bigTotalAmount.gt(bigEthBalance))
+          throw new Error(
+            `Balance should be at least ${utils.formatUnits(
+              bigTotalAmount
+            )} ETH.`
+          );
+
+        balance.amount = bigBalance.sub(bigTotalAmount);
+        await balance.save({ session });
+      } else {
+        ethBalance.amount = bigEthBalance.sub(gasFeeTaxed);
+        await ethBalance.save({ session });
+
+        balance.amount = bigBalance.sub(bigAmount);
+        await balance.save({ session });
+      }
+
+      const gasTx = new Transaction({
+        userId,
+        code: "eth",
+        amount: gasFeeTaxed,
+        type: "gas",
+        date: moment.utc(),
+      });
+
+      await gasTx.save({ session });
 
       const tx = new Transaction({
         userId,
@@ -272,6 +354,7 @@ router.post(
       });
 
       await tx.save({ session });
+
       await session.commitTransaction();
       res.json({ data: true });
     } catch (e) {
@@ -311,9 +394,8 @@ router.post(
       if (!asset.listed) throw new Error("Asset is inactive.");
 
       const bigAmount = BigNumber.from(amount);
-      const minStake = BigNumber.from(asset.minStake).mul(
-        Math.pow(10, asset.decimals)
-      );
+      const minStake = utils.parseUnits(asset.minStake, asset.decimals);
+
       if (bigAmount.lt(minStake)) {
         throw new Error(`Min. stake: ${asset.minStake}`);
       }

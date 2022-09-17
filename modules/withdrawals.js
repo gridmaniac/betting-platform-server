@@ -1,4 +1,5 @@
 const ERC20 = require("../modules/erc20");
+const Ethereum = require("../modules/ethereum");
 const Transaction = require("../models/transaction");
 const Setting = require("../models/setting");
 const Asset = require("../models/asset");
@@ -17,8 +18,6 @@ module.exports.runWithdrawals = async function () {
     if (!tx) continue;
     try {
       const asset = await Asset.findOne({ code: tx.code });
-      if (!asset.listed) throw new Error("Asset is inactive.");
-
       const web3HttpProvider = await Setting.findOne({
         name: "WEB3_HTTP_PROVIDER",
       });
@@ -28,25 +27,17 @@ module.exports.runWithdrawals = async function () {
       tx.status = "processed";
       await tx.save();
 
-      const token = new ERC20(
-        asset.contract,
-        JSON.parse(asset.contractABI),
-        web3HttpProvider.value
-      );
-
-      const gasLimitSetting = await Setting.findOne({
-        name: "GAS_LIMIT",
-      });
+      const wallet =
+        asset.type === "ethereum"
+          ? new Ethereum(web3HttpProvider.value)
+          : new ERC20(
+              asset.contract,
+              JSON.parse(asset.contractABI),
+              web3HttpProvider.value
+            );
 
       const bigAmount = BigNumber.from(tx.amount);
-      const txHash = await token.transfer(
-        process.env.HOT_ADDRESS,
-        process.env.HOT_ADDRESS_PKEY,
-        tx.address,
-        bigAmount,
-        gasLimitSetting.value
-      );
-
+      const txHash = await wallet.transfer(tx.address, bigAmount);
       tx.txHash = txHash;
       await tx.save();
     } catch (e) {
