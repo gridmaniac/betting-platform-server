@@ -28,6 +28,10 @@ const schema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  ethTax: {
+    type: String,
+    default: 0,
+  },
 });
 
 module.exports = mongoose.model("Asset", schema);

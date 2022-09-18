@@ -284,12 +284,6 @@ router.post(
 
       if (!ethPrice) throw new Error("ETH_PRICE is missing.");
 
-      const ethTax = await Setting.findOne({
-        name: "ETH_TAX",
-      });
-
-      if (!ethTax) throw new Error("ETH_TAX is missing.");
-
       const ethBalance = await Balance.findOne({ userId, code: "eth" });
       const bigEthBalance = BigNumber.from(ethBalance.amount);
 
@@ -305,7 +299,7 @@ router.post(
       const gasFee = await wallet.estimateGasFee(user.address, bigAmount);
       const gasTax = BN(utils.parseUnits("1").toString())
         .div(ethPrice.value)
-        .times(ethTax.value);
+        .times(asset.ethTax);
 
       const gasFeeTaxed = gasFee.add(gasTax.toFixed(0));
       if (gasFeeTaxed.gt(bigEthBalance))
