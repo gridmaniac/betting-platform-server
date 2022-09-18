@@ -208,6 +208,7 @@ router.get(
     const asset = await Asset.findOne({ code });
     res.json({
       address,
+      listed: asset.listed,
       balance: balance.amount.toString(),
       inBets: inBets.toString(),
       decimals: asset.decimals,
