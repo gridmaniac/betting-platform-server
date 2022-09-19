@@ -22,6 +22,10 @@ const schema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  profit: {
+    type: String,
+    default: "0",
+  },
   status: {
     type: String,
     required: true,

@@ -32,6 +32,8 @@ module.exports.processOpenBets = (event, allBets) => {
           profit = BigNumber.from(
             ratio.times(negativeHouse.toString()).toFixed(0)
           ).add(bet.amount);
+
+          bet.profit = profit;
         }
 
         if (profit)
