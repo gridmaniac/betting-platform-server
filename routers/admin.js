@@ -2,6 +2,7 @@ const { Router } = require("express");
 const router = new Router();
 const passport = require("passport");
 const { processTransactions } = require("../modules/deposits");
+const { processOpenBets } = require("../modules/bets-processor");
 
 const Setting = require("../models/setting");
 const Asset = require("../models/asset");
@@ -9,6 +10,7 @@ const Transaction = require("../models/transaction");
 const Bet = require("../models/bet");
 const User = require("../models/user");
 const Balance = require("../models/balance");
+const Event = require("../models/event");
 
 router.use(
   passport.authenticate("jwt", { session: false }),
@@ -128,6 +130,25 @@ router.get("/users", async (req, res) => {
 router.get("/balances", async (req, res) => {
   const balances = await Balance.find({});
   res.json({ data: balances });
+});
+
+router.post("/replenish-returns", async (req, res) => {
+  const events = await Event.find({
+    processed: true,
+    status: "closed",
+  });
+
+  for (const event of events) {
+    const bets = await Bet.find({
+      status: "settled",
+      eventId: event.id,
+    });
+
+    processOpenBets(event, bets);
+    for (const bet of bets) await bet.save();
+  }
+
+  res.json({ data: true });
 });
 
 module.exports = router;
