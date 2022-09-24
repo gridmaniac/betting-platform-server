@@ -21,6 +21,10 @@ const schema = new mongoose.Schema({
   winnerId: String,
   homeScore: Number,
   awayScore: Number,
+  draw: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 module.exports = mongoose.model("Event", schema);
