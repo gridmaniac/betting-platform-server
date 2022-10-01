@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const moment = require("moment");
 
 const schema = new mongoose.Schema({
   email: {
@@ -21,6 +22,14 @@ const schema = new mongoose.Schema({
   isActive: {
     type: Boolean,
     default: false,
+  },
+  createTime: {
+    type: Date,
+    default: moment.utc(),
+  },
+  walletLockTime: {
+    type: Date,
+    default: null,
   },
   role: String,
 });

@@ -175,12 +175,25 @@ router.get(
   }
 );
 
+router.post(
+  "/wallet/lock",
+  passport.authenticate("jwt", { session: false }),
+  async (req, res) => {
+    const { email } = req.user;
+    const user = await User.findOne({ email });
+    if (!user || !user.isActive) return res.json({ data: false });
+    user.walletLockTime = moment.utc();
+    await user.save();
+    res.json({ data: true });
+  }
+);
+
 router.get(
   "/wallet/:code",
   passport.authenticate("jwt", { session: false }),
   async (req, res) => {
     const { code } = req.params;
-    const { id: userId, address } = req.user;
+    const { id: userId, address, walletLockTime } = req.user;
     const transactions = await Transaction.find({ userId, code }, null, {
       sort: {
         date: -1,
@@ -216,6 +229,7 @@ router.get(
       ethDecimals: 18,
       hotAddress: process.env.HOT_ADDRESS,
       contractAddress: asset.contract,
+      walletLockTime,
       transactions: transactions.map((x) => ({
         txHash: x.txHash,
         code: x.code,
