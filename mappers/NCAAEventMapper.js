@@ -7,7 +7,7 @@ class NCAAEventMapper extends EventMapper {
 
     this.dto.closeTime = moment
       .utc(this.event["start_time"])
-      .subtract(24, "hours");
+      .subtract(2, "hours");
   }
 }
 
