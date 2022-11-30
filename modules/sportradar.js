@@ -20,8 +20,22 @@ class SportRadar {
     return data.seasons;
   }
 
+  async getSeasonsWithLocale(locale) {
+    const { data } = await this.api.get(`${locale}/seasons.json`);
+    await delay(1000);
+    return data.seasons;
+  }
+
   async getSeasonSummaries(seasonId) {
     const { data } = await this.api.get(`seasons/${seasonId}/summaries.json`);
+    await delay(1000);
+    return data.summaries;
+  }
+
+  async getSeasonSummariesWithLocale(seasonId, locale) {
+    const { data } = await this.api.get(
+      `${locale}/seasons/${seasonId}/summaries.json`
+    );
     await delay(1000);
     return data.summaries;
   }

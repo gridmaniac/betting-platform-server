@@ -16,7 +16,7 @@ module.exports.runJob = async function () {
     const radar = new SportRadar(apiUrl.value, apiKey.value);
 
     const minDate = moment().subtract(1, "day");
-    const seasons = await radar.getSeasons();
+    const seasons = await radar.getSeasonsWithLocale("en");
     const nbaCompetitions = await Setting.findOne({
       name: "NBA_COMPETITIONS",
     });
@@ -30,12 +30,12 @@ module.exports.runJob = async function () {
     });
 
     for (const season of filteredSeasons) {
-      const { dto } = new NBALSeasonMapper(season);
+      const { dto } = new NBASeasonMapper(season);
       await Season.findOneAndUpdate({ id: dto.id }, dto, {
         upsert: true,
       });
 
-      const summaries = await radar.getSeasonSummaries(dto.id);
+      const summaries = await radar.getSeasonSummariesWithLocale(dto.id, "en");
       for (const record of summaries) {
         const { dto } = new NBAEventMapper(record);
         const session = await Event.startSession();
