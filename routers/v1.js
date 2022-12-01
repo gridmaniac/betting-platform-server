@@ -51,7 +51,7 @@ router.get("/events/:seasonId", async (req, res) => {
       },
       startTime: {
         $not: {
-          $gt: moment().add(3, "month").toDate(),
+          $gt: moment().add(2, "month").toDate(),
         },
       },
       ...status,
