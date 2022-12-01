@@ -45,10 +45,14 @@ router.get("/events/:seasonId", async (req, res) => {
     {
       seasonId,
       closeTime: {
-        $or: [
-          { $exists: false },
-          { $gte: moment().subtract(1, "month").toDate() },
-        ],
+        $not: {
+          $lt: moment().subtract(1, "month").toDate(),
+        },
+      },
+      startTime: {
+        $not: {
+          $gt: moment().add(3, "month").toDate(),
+        },
       },
       ...status,
     },
