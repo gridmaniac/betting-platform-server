@@ -32,9 +32,12 @@ class SportRadar {
     return data.summaries;
   }
 
-  async getSeasonSummariesWithLocale(seasonId, locale) {
+  async getSeasonSummariesWithLocale(seasonId, locale, offset = 0) {
     const { data } = await this.api.get(
-      `${locale}/seasons/${seasonId}/summaries.json`
+      `${locale}/seasons/${seasonId}/summaries.json`,
+      {
+        params: { offset },
+      }
     );
     await delay(1000);
     return data.summaries;

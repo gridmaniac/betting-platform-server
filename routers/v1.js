@@ -41,11 +41,24 @@ router.get("/events/:seasonId", async (req, res) => {
       ? { status: { $ne: "closed" } }
       : { status: "closed" };
 
-  const events = await Event.find({ seasonId, ...status }, null, {
-    sort: {
-      startTime: 1,
+  const events = await Event.find(
+    {
+      seasonId,
+      closeTime: {
+        $or: [
+          { $exists: false },
+          { $gte: moment().subtract(1, "month").toDate() },
+        ],
+      },
+      ...status,
     },
-  });
+    null,
+    {
+      sort: {
+        startTime: 1,
+      },
+    }
+  );
 
   res.json(events);
 });

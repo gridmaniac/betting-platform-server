@@ -35,17 +35,28 @@ module.exports.runJob = async function () {
         upsert: true,
       });
 
-      const summaries = await radar.getSeasonSummariesWithLocale(dto.id, "en");
-      for (const record of summaries) {
-        const { dto } = new NBAEventMapper(record);
-        const session = await Event.startSession();
-        await session.withTransaction(async () => {
-          await Event.findOneAndUpdate({ id: dto.id }, dto, {
-            upsert: true,
-          });
-        });
+      let offset = 0;
+      while (true) {
+        const summaries = await radar.getSeasonSummariesWithLocale(
+          dto.id,
+          "en",
+          offset
+        );
 
-        session.endSession();
+        for (const record of summaries) {
+          const { dto } = new NBAEventMapper(record);
+          const session = await Event.startSession();
+          await session.withTransaction(async () => {
+            await Event.findOneAndUpdate({ id: dto.id }, dto, {
+              upsert: true,
+            });
+          });
+
+          session.endSession();
+        }
+
+        if (summaries.length < 200) break;
+        offset += 200;
       }
     }
   } catch (e) {
